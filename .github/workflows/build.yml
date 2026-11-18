@@ -77,7 +77,7 @@ jobs:
         run: |
           task_args=(":app:assemble${ABI_VARIANT}GmsOptimized")
           if [ "$ABI_VARIANT" = "Universal" ]; then
-            task_args=(":app:testUniversalGmsOptimizedUnitTest" --tests "com.mochyy.mochymusic.ui.player.drizzy.DrizzyDesignTest" --tests "com.mochyy.mochymusic.ui.player.flow.*Test" "${task_args[@]}")
+            task_args=(":app:testUniversalGmsDebugUnitTest" --tests "com.mochyy.mochymusic.ui.player.drizzy.DrizzyDesignTest" --tests "com.mochyy.mochymusic.ui.player.flow.*Test" "${task_args[@]}")
           fi
           ./gradlew "${task_args[@]}" -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs="-Xmx5g -XX:+UseParallelGC -Dfile.encoding=UTF-8" --no-parallel --max-workers=2 --no-configuration-cache --console=plain --warning-mode summary
 
@@ -88,6 +88,6 @@ jobs:
           path: |
             app/build/outputs/apk/${{ matrix.abi }}Gms/optimized/*.apk
             app/build/outputs/mapping/${{ matrix.abi }}GmsOptimized/*.txt
-            app/build/test-results/testUniversalGmsOptimizedUnitTest/*.xml
+            app/build/test-results/testUniversalGmsDebugUnitTest/*.xml
           retention-days: 7
           if-no-files-found: error
