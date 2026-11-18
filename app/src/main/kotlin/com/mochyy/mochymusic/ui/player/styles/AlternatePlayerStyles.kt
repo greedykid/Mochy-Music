@@ -78,6 +78,7 @@ fun AlternatePlayerStyle(
     preview: Boolean = false,
 ) {
     when (style) {
+        PlayerStyle.DRIZZY -> DrizzyPlayerStyle(actions, modifier, preview)
         PlayerStyle.POSTER -> PosterPlayerStyle(actions, modifier, preview)
         PlayerStyle.TIMELINE -> TimelinePlayerStyle(actions, modifier, preview)
         PlayerStyle.LYRICS -> LyricsPlayerStyle(actions, modifier, preview)

@@ -691,6 +691,7 @@ enum class PlayerCoverStyle {
 enum class PlayerStyle(val displayName: String, val selectorName: String) {
     // the flagship as it is now: frosted cover fade, moving cover colours, the new buttons and bottom bar
     FLAGSHIP("Flagship", "Flagship"),
+    DRIZZY("Drizzy", "Drizzy"),
     // the flagship before its layout refresh, kept as a variant under it in the selector
     CLASSIC("Classic", "Classic"),
     /** the flagship with a record player for its cover, whose arm is the seek bar */
@@ -709,7 +710,7 @@ enum class PlayerStyle(val displayName: String, val selectorName: String) {
     // a look module's own player, drawn from its layout; kept last so the others keep their places, and only offered while such a module is on
     MODULE("Module", "Module");
 
-    val editable: Boolean get() = this == FLAGSHIP || this == CLASSIC || this == TURNTABLE || this == POSTER || this == IPOD || isBedside
+    val editable: Boolean get() = this == DRIZZY || this == FLAGSHIP || this == CLASSIC || this == TURNTABLE || this == POSTER || this == IPOD || isBedside
 
     // the two nightstand styles share their sheet, their night look and their lock screen rules
     val isBedside: Boolean get() = this == BEDSIDE || this == BEDSIDE_TILES
@@ -742,6 +743,7 @@ enum class PlayerStyle(val displayName: String, val selectorName: String) {
         // the selector's columns, each look with its variants stacked under it, a swipe down away
         val selectorColumns: List<List<PlayerStyle>> = listOf(
             listOf(FLAGSHIP, CLASSIC),
+            listOf(DRIZZY),
             listOf(TURNTABLE),
             listOf(VIDEO),
             listOf(IPOD),

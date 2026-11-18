@@ -238,6 +238,7 @@ fun StudioSheets(
             StudioSheet.POSTER -> PosterOptions()
             StudioSheet.IPOD -> IpodOptions()
             StudioSheet.BEDSIDE -> BedsideOptions()
+            StudioSheet.DRIZZY -> Unit // Drizzy has its own full-screen component editor.
 
         }
         }

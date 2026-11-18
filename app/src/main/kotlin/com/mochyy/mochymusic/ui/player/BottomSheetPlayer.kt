@@ -1859,7 +1859,13 @@ private fun PlayerSheet(
                 studio.settleOn(index, restyled, velocity = velocity)
             },
             onEdit = { focused ->
-                if (playerStyles.getOrNull(focused) == PlayerStyle.POSTER) {
+                if (playerStyles.getOrNull(focused) == PlayerStyle.DRIZZY) {
+                    val restyled = playerStyle != PlayerStyle.DRIZZY
+                    if (restyled) onPlayerStyleChange(PlayerStyle.DRIZZY)
+                    studio.settleOn(focused, restyled) {
+                        studio.openSheet(com.mochyy.mochymusic.ui.player.studio.StudioSheet.DRIZZY)
+                    }
+                } else if (playerStyles.getOrNull(focused) == PlayerStyle.POSTER) {
                     // its one edit is its visualizer: back to the player, with the poster's sheet
                     val restyled = playerStyle != PlayerStyle.POSTER
                     if (restyled) onPlayerStyleChange(PlayerStyle.POSTER)
@@ -1898,6 +1904,9 @@ private fun PlayerSheet(
             },
         )
         // the Poster's, the iPod's and the bedside's sheets, each over its own style
+        if (playerStyle == PlayerStyle.DRIZZY && studio.sheet == com.mochyy.mochymusic.ui.player.studio.StudioSheet.DRIZZY) {
+            com.mochyy.mochymusic.ui.player.drizzy.DrizzyEditor(styleActions) { studio.sheet = null }
+        }
         if (playerStyle == PlayerStyle.POSTER || playerStyle == PlayerStyle.IPOD || playerStyle.isBedside) {
             com.mochyy.mochymusic.ui.player.studio.StyleSheets(studio)
         }
