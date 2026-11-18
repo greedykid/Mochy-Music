@@ -429,7 +429,7 @@ fun PressScaleActionButton(
         modifier = modifier
             .size(size)
             .clickable(
-                indication = RemoteFocus,
+                indication = if(com.mochyy.mochymusic.ui.component.LocalCircularButtonFeedback.current) com.mochyy.mochymusic.ui.component.CircularHighlight else RemoteFocus,
                 interactionSource = interactionSource,
                 onClick = onClick
             )

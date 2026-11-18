@@ -1,5 +1,17 @@
 package com.mochyy.mochymusic.ui.player.flow
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.clipToBounds
+import com.mochyy.mochymusic.ui.component.CircularHighlight
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -59,12 +71,37 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     val index by remember(lines,clock){derivedStateOf{LyricsUtils.findCurrentLineIndex(lines,clock.positionMs())}}
     val origin=remember{arrayOfNulls<Rect>(1)}
     val line=if(preview)"Your current lyric line appears here" else lines.getOrNull(index)?.text?:"Open lyrics"
-    Row(modifier.fillMaxWidth().padding(horizontal=32.dp).heightIn(min=40.dp).onGloballyPositioned{if(!preview)origin[0]=it.boundsInRoot()}.clickable(enabled=active&&!preview){origin[0]?.let(onPageFrom);onOpen()},verticalAlignment=Alignment.CenterVertically) {
-        Text(line,color=flowColor(options.activeColor),fontSize=options.lyricSize.sp,fontWeight=FontWeight.SemiBold,
-            maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
-        Icon(painterResource(R.drawable.navigate_next),"Open full lyrics",tint=flowColor(options.activeColor).copy(alpha=.65f),modifier=Modifier.padding(start=12.dp).size(22.dp))
+    val frame=FlowLyricFrame(info?.mediaId,index,line)
+    val open={origin[0]?.let(onPageFrom);onOpen()}
+    Row(modifier.fillMaxWidth().padding(horizontal=32.dp).heightIn(min=40.dp)
+        .onGloballyPositioned{if(!preview)origin[0]=it.boundsInRoot()}
+        .clickable(enabled=active&&!preview,interactionSource=remember{MutableInteractionSource()},indication=null,onClick=open),
+        verticalAlignment=Alignment.CenterVertically) {
+        AnimatedContent(targetState=frame,modifier=Modifier.weight(1f).clipToBounds(),contentAlignment=Alignment.CenterStart,
+            transitionSpec={
+                if(!active||preview) fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                else {
+                    val direction=if(targetState.song==initialState.song&&targetState.index<initialState.index)-1 else 1
+                    val sameSong=targetState.song==initialState.song
+                    val incoming=fadeIn(tween(260,easing=FastOutSlowInEasing))+
+                        slideInVertically(tween(280,easing=FastOutSlowInEasing)){if(sameSong)it*direction/3 else 0}
+                    val outgoing=fadeOut(tween(140))+
+                        slideOutVertically(tween(220,easing=FastOutSlowInEasing)){if(sameSong)-it*direction/3 else 0}
+                    (incoming togetherWith outgoing).using(SizeTransform(clip=true,sizeAnimationSpec={_,_->tween(240)}))
+                }
+            },label="Flow lyric line") { shown ->
+            Text(shown.text,color=flowColor(options.activeColor),fontSize=options.lyricSize.sp,fontWeight=FontWeight.SemiBold,
+                maxLines=1,overflow=TextOverflow.Ellipsis)
+        }
+        Box(Modifier.size(40.dp).clickable(enabled=active&&!preview,interactionSource=remember{MutableInteractionSource()},indication=CircularHighlight,onClick=open),
+            contentAlignment=Alignment.Center) {
+            Icon(painterResource(R.drawable.navigate_next),"Open full lyrics",tint=flowColor(options.activeColor).copy(alpha=.65f),modifier=Modifier.size(22.dp))
+        }
     }
 }
+
+@Immutable
+private data class FlowLyricFrame(val song:String?,val index:Int,val text:String)
 
 internal val FlowFooterActions=listOf(PlayerMenuAction.LYRICS,PlayerMenuAction.OUTPUT,PlayerMenuAction.QUEUE)
 
@@ -94,7 +131,7 @@ internal fun FlowBottomBar(
                 FlowFooterActions.forEachIndexed { i,action ->
                     val label=when(i){0->"Open lyrics";1->"Change playback device";else->"Open queue"}
                     Box(Modifier.size(48.dp).onGloballyPositioned{if(!preview)rects[i]=it.boundsInRoot()}
-                        .clickable(enabled=active&&!preview){rects[i]?.let(onPageFrom);onAction(action)},contentAlignment=Alignment.Center) {
+                        .clickable(enabled=active&&!preview,interactionSource=remember(action){MutableInteractionSource()},indication=CircularHighlight){rects[i]?.let(onPageFrom);onAction(action)},contentAlignment=Alignment.Center) {
                         if(i==1)Icon(Icons.Rounded.Cast,label,tint=ink.copy(alpha=.85f),modifier=Modifier.size(28.dp))
                         else Icon(painterResource(if(i==0)R.drawable.lyrics else R.drawable.apple_queue),label,tint=ink.copy(alpha=.85f),modifier=Modifier.size(28.dp))
                     }

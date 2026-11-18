@@ -243,7 +243,8 @@ fun BottomSheetPlayer(
     val activeStyle by rememberEnumPreference(com.mochyy.mochymusic.constants.PlayerStyleKey, PlayerStyle.FLAGSHIP)
     val overrides = if(activeStyle==PlayerStyle.FLAGSHIP_FLOW) FlowPreferenceOverrides else emptyMap()
     val songCarousel = rememberSongCarousel(playerConnection)
-    androidx.compose.runtime.CompositionLocalProvider(LocalSongCarousel provides songCarousel, com.mochyy.mochymusic.utils.LocalPreferenceKeyOverrides provides overrides) {
+    androidx.compose.runtime.CompositionLocalProvider(LocalSongCarousel provides songCarousel, com.mochyy.mochymusic.utils.LocalPreferenceKeyOverrides provides overrides,
+        com.mochyy.mochymusic.ui.component.LocalCircularButtonFeedback provides (activeStyle==PlayerStyle.FLAGSHIP_FLOW)) {
         PlayerSheet(state = state, navController = navController, modifier = modifier, pureBlack = pureBlack)
     }
 }
@@ -1750,7 +1751,7 @@ private fun PlayerSheet(
             if(isFlow && state.isExpanded && !studioEngaged && !lyricsMounted) {
                 androidx.compose.material3.Icon(painterResource(R.drawable.tune),"Customize Flagship Flow",tint=Color.White,
                     modifier=Modifier.align(Alignment.TopEnd).padding(top=statusBarTopInset+8.dp,end=12.dp).size(44.dp)
-                        .clickable{studio.openSheet(com.mochyy.mochymusic.ui.player.studio.StudioSheet.FLOW)}.padding(11.dp))
+                        .clickable(interactionSource=remember{androidx.compose.foundation.interaction.MutableInteractionSource()},indication=com.mochyy.mochymusic.ui.component.CircularHighlight){studio.openSheet(com.mochyy.mochymusic.ui.player.studio.StudioSheet.FLOW)}.padding(11.dp))
             }
 
             // over everything on the player, pages included; a tv closes it with the back button instead

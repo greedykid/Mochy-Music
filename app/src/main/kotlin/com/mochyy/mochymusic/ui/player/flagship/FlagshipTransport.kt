@@ -6,6 +6,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.indication
+import com.mochyy.mochymusic.ui.component.CircularHighlight
+import com.mochyy.mochymusic.ui.component.LocalCircularButtonFeedback
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -268,7 +271,7 @@ private fun PlayButton(
                 scaleX = s
                 scaleY = s
             }
-            .clickable(interactionSource = source, indication = RemoteFocus, onClick = onClick)
+            .clickable(interactionSource = source, indication = if(LocalCircularButtonFeedback.current) CircularHighlight else RemoteFocus, onClick = onClick)
             .semantics {
                 contentDescription = description
                 role = Role.Button
@@ -352,6 +355,7 @@ private fun SkipButton(
                 scaleY = s
                 alpha = if (enabled) 1f else 0.36f
             }
+            .then(if(LocalCircularButtonFeedback.current) Modifier.indication(source,CircularHighlight) else Modifier)
             .tapOrHold(
                 enabled = enabled,
                 onTap = {

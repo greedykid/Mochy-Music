@@ -347,7 +347,8 @@ fun PlayerSelectorOverlay(
                         // card, which mustn't be built in the frame it has to cover the player
                         androidx.compose.runtime.CompositionLocalProvider(
                             com.mochyy.mochymusic.utils.LocalPreferenceKeyOverrides provides
-                                (if(style==PlayerStyle.FLAGSHIP_FLOW) com.mochyy.mochymusic.ui.player.flow.FlowPreferenceOverrides else emptyMap())
+                                (if(style==PlayerStyle.FLAGSHIP_FLOW) com.mochyy.mochymusic.ui.player.flow.FlowPreferenceOverrides else emptyMap()),
+                            com.mochyy.mochymusic.ui.component.LocalCircularButtonFeedback provides (style==PlayerStyle.FLAGSHIP_FLOW)
                         ) {
                         when (style) {
                             PlayerStyle.FLAGSHIP_FLOW -> FlagshipPreview(flagship=true,flow=true)

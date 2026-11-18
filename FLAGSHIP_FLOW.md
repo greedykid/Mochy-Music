@@ -30,3 +30,11 @@ Long control content scrolls within the available area on short screens. The nat
 GitHub Actions builds the universal GMS debug APK and runs both `DrizzyDesignTest` and `FlowOptionsTest`. Flow tests cover native editor/style registration, reference defaults, OUTPUT shortcut binding, appearance-key isolation, option round trips, default compatibility, malformed option normalization and bottom-section sizing.
 
 Device checks still required: select Flow/Flagship/Drizzy and compare appearance; edit cover/background independently; restart persistence; native pending seek/buffering; synchronized and missing lyrics; lyrics/queue open/close transitions; output switching and hardware volume; short screens, landscape and large text. The debug signer is the same persistent fork key used by the Drizzy APK.
+
+## Smooth lyric and circular feedback update
+
+Current-line changes use a short fade/vertical slide. Backward seeks reverse the slide; changing songs crossfades. A clipped one-line viewport keeps outgoing text clear of the duration bar. Previews and inactive players switch without animation.
+
+Flagship Flow opts in to centered circular press feedback for native playback and song-info buttons. The footer shortcuts, lyric chevron and Flow settings button use the same feedback. Held skip controls retain their speed badges and hold behavior. Other styles keep their original feedback. Animation jobs stop with their indication nodes.
+
+The companion Looks 1.1 ZIP still selects `FLAGSHIP_FLOW`; the animation code requires the updated fork APK, not just a manifest update.
