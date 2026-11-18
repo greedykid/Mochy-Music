@@ -64,6 +64,7 @@ fun CoverFrost(
     glassState: GlassState,
     progressProvider: () -> Float,
     maxHeight: Dp,
+    extendBottom: Dp = 0.dp,
     // gone while a page is up
     fadeProvider: () -> Float = { 1f },
     // how far the controls (and with them the cover's bottom) were moved, px down; read while placing only
@@ -85,7 +86,7 @@ fun CoverFrost(
         progressiveRamp = FullAt,
         modifier = Modifier
             .fillMaxWidth()
-            .height(maxHeight * (FrostBottom - top))
+            .height(maxHeight * (FrostBottom - top) + extendBottom)
             .offset { IntOffset(0, (maxHeight.toPx() * top + offsetProvider()).roundToInt()) }
             // the blur is one draw, so its fade-in is laid on that draw instead of a second offscreen pass
             .graphicsLayer {

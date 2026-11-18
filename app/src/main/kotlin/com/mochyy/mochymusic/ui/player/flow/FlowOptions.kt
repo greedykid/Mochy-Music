@@ -31,7 +31,11 @@ data class FlowOptions(
     val activeColor: String = "#FFFFFF",
     val inactiveColor: String = "#55FFFFFF",
 ) {
-    fun footerHeight():Float = (if(showVolume)40f else 0f) + (if(showButtons)footerGap+48f else 0f) + (if(showDevice)deviceGap+18f else 0f)
+    fun footerHeight(fontScale:Float=1f):Float = (if(showVolume)40f else 0f) + (if(showButtons)footerGap+48f else 0f) +
+        (if(showDevice)deviceGap+18f*(if(fontScale.isFinite())fontScale.coerceAtLeast(1f)else 1f) else 0f)
+    fun forHeight(height:Float):FlowOptions = if(height>=500f)this else copy(
+        transportGap=transportGap.coerceAtMost(12f),volumeGap=volumeGap.coerceAtMost(12f),
+        footerGap=footerGap.coerceAtMost(8f),deviceGap=deviceGap.coerceAtMost(8f),bottomGap=bottomGap.coerceAtMost(8f),iconScale=iconScale.coerceAtMost(1f))
     fun normalized(): FlowOptions {
         fun safe(v:Float,min:Float,max:Float,fallback:Float)=if(v.isFinite())v.coerceIn(min,max)else fallback
         fun color(v:String,fallback:String)=v.takeIf{it.matches(Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?"))}?:fallback

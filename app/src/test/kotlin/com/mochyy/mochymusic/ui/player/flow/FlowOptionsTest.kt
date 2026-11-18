@@ -46,4 +46,16 @@ class FlowOptionsTest {
         assertEquals(0f,v.copy(showVolume=false,showButtons=false,showDevice=false).footerHeight(),0f)
         assertEquals(40f,v.copy(showButtons=false,showDevice=false).footerHeight(),0f)
     }
+    @Test fun largeTextReservesDeviceNameHeight() {
+        assertEquals(160f,FlowOptions().footerHeight(2f),0f)
+    }
+    @Test fun shortScreensCompactWithoutChangingStoredOptions() {
+        val stored=FlowOptions(transportGap=80f,footerGap=60f)
+        val compact=stored.forHeight(390f)
+        assertEquals(12f,compact.transportGap,0f)
+        assertEquals(8f,compact.footerGap,0f)
+        assertEquals(80f,stored.transportGap,0f)
+        assertEquals(stored,stored.forHeight(844f))
+    }
+
 }

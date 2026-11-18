@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
 
@@ -39,6 +40,7 @@ private val ShadeStops = arrayOf(
 fun ControlsShade(
     progressProvider: () -> Float,
     maxHeight: Dp,
+    extendBottom: Dp = 0.dp,
     // gone while a page is up
     fadeProvider: () -> Float = { 1f },
     // how far the controls (and with them the cover's bottom) were moved, px down; read while placing only
@@ -54,7 +56,7 @@ fun ControlsShade(
     Spacer(
         modifier = Modifier
             .fillMaxWidth()
-            .height(maxHeight * (1f - GlareTop))
+            .height(maxHeight * (1f - GlareTop) + extendBottom)
             .offset { IntOffset(0, (maxHeight.toPx() * GlareTop + offsetProvider()).roundToInt()) }
             .drawWithCache {
                 val screen = size.height / (1f - GlareTop)

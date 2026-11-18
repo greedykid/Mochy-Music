@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,7 +49,7 @@ internal fun FlowTrack(fraction:()->Float,thickness:Float,active:Color,inactive:
 }
 
 @Composable
-internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,modifier:Modifier=Modifier,preview:Boolean=false) {
+internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,modifier:Modifier=Modifier,preview:Boolean=false,onPageFrom:(Rect)->Unit={}) {
     if(!options.showLyrics)return
     val connection=LocalPlayerConnection.current
     val lyrics=rememberStyleLyrics(readings=active&&!preview)
@@ -56,8 +57,9 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     val lines=lyrics.lines.takeIf{lyrics.mediaId==info?.mediaId}.orEmpty()
     val clock=rememberLivePosition(animated=active&&!preview).withLyricsOffset()
     val index by remember(lines,clock){derivedStateOf{LyricsUtils.findCurrentLineIndex(lines,clock.positionMs())}}
+    val origin=remember{arrayOfNulls<Rect>(1)}
     val line=if(preview)"Your current lyric line appears here" else lines.getOrNull(index)?.text?:"Open lyrics"
-    Row(modifier.fillMaxWidth().padding(horizontal=32.dp).heightIn(min=40.dp).clickable(enabled=!preview,onClick=onOpen),verticalAlignment=Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth().padding(horizontal=32.dp).heightIn(min=40.dp).onGloballyPositioned{if(!preview)origin[0]=it.boundsInRoot()}.clickable(enabled=active&&!preview){origin[0]?.let(onPageFrom);onOpen()},verticalAlignment=Alignment.CenterVertically) {
         Text(line,color=flowColor(options.activeColor),fontSize=options.lyricSize.sp,fontWeight=FontWeight.SemiBold,
             maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
         Icon(painterResource(R.drawable.navigate_next),"Open full lyrics",tint=flowColor(options.activeColor).copy(alpha=.65f),modifier=Modifier.padding(start=12.dp).size(22.dp))
@@ -102,7 +104,7 @@ internal fun FlowBottomBar(
         if(options.showDevice) {
             Spacer(Modifier.height(options.deviceGap.dp))
             Text(audio?.fill("{device}").orEmpty(),color=ink.copy(alpha=.65f),fontSize=12.sp,
-                maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.align(Alignment.CenterHorizontally).height(18.dp))
+                maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.align(Alignment.CenterHorizontally).height((18f*LocalDensity.current.fontScale.coerceAtLeast(1f)).dp))
         }
     }
 }
@@ -112,4 +114,4 @@ internal fun FlowBottomBar(
 internal fun flowBottomInset(options:FlowOptions)=WindowInsets.navigationBarsIgnoringVisibility.asPaddingValues().calculateBottomPadding()+options.bottomGap.dp
 
 @Composable
-internal fun flowBottomFootprint(options:FlowOptions)=flowBottomInset(options)+options.footerHeight().dp
+internal fun flowBottomFootprint(options:FlowOptions)=flowBottomInset(options)+options.footerHeight(LocalDensity.current.fontScale).dp

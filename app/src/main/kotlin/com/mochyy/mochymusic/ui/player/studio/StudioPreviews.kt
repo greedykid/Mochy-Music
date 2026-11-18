@@ -165,7 +165,7 @@ internal fun FlagshipPreview(
     flow: Boolean = false,
 ) {
     val connection = LocalPlayerConnection.current ?: return
-    val flowOptions = rememberFlowOptions()
+    val flowOptions = rememberFlowOptions().forHeight(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.toFloat())
     val track by connection.uiState.trackInfo.collectAsState()
     val transport by connection.uiState.transportState.collectAsState()
     val queue by connection.uiState.queueState.collectAsState()
@@ -217,9 +217,9 @@ internal fun FlagshipPreview(
             // the design's dark shade under the controls, as the live flagship lays it over its frost
             Spacer(
                 modifier = Modifier
-                    .offset(y = maxHeight * 0.538f)
+                    .offset(y = maxHeight * (if(flow).398f else .538f))
                     .fillMaxWidth()
-                    .height(maxHeight * 0.462f)
+                    .height(maxHeight * (if(flow).602f else .462f))
                     .drawWithCache {
                         val shade = Brush.verticalGradient(
                             0f to Color.Transparent,

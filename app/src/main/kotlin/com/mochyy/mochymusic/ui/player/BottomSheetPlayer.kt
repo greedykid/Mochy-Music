@@ -377,7 +377,7 @@ private fun PlayerSheet(
     }
     // the Turntable is the flagship around a record player, whatever cover the flagship is set to
     val isFlow = playerStyle == PlayerStyle.FLAGSHIP_FLOW
-    val flowOptions = rememberFlowOptions()
+    val flowOptions = rememberFlowOptions().forHeight(androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.toFloat())
     val isTurntable = playerStyle == com.mochyy.mochymusic.constants.PlayerStyle.TURNTABLE
     val shownCoverStyle = if (isTurntable) PlayerCoverStyle.TURNTABLE else coverStyle
     val controlsDrawShift = if (!isFlow && shownCoverStyle == PlayerCoverStyle.EDGE_TO_EDGE) ControlsDrawShift else 0.dp
@@ -1208,14 +1208,16 @@ private fun PlayerSheet(
                     glassState = morphingGlassState,
                     progressProvider = progressProvider,
                     maxHeight = screenHeight,
+                    extendBottom = if(isFlow) screenHeight*.14f else 0.dp,
                     fadeProvider = { 1f - lyricsProgress },
-                    offsetProvider = layoutTweaks::controlsOffset,
+                    offsetProvider = {layoutTweaks.controlsOffset() - if(isFlow) with(density){(screenHeight*.14f).toPx()} else 0f},
                 )
                 if (shownCoverStyle == PlayerCoverStyle.EDGE_TO_EDGE) ControlsShade(
                     progressProvider = progressProvider,
                     maxHeight = screenHeight,
+                    extendBottom = if(isFlow) screenHeight*.14f else 0.dp,
                     fadeProvider = { 1f - lyricsProgress },
-                    offsetProvider = layoutTweaks::controlsOffset,
+                    offsetProvider = {layoutTweaks.controlsOffset() - if(isFlow) with(density){(screenHeight*.14f).toPx()} else 0f},
                     glareProvider = ambient::glare,
                 )
             } else if (!isTurntable) SeamBlur(
@@ -1652,7 +1654,7 @@ private fun PlayerSheet(
                         }
                     }
 
-                    if(isFlow) FlowLyricTicker(flowOptions,sheetShowing && !studioEngaged,{transition.open(PlayerPage.LYRICS)})
+                    if(isFlow) FlowLyricTicker(flowOptions,sheetShowing && !studioEngaged,{transition.open(PlayerPage.LYRICS)},onPageFrom={morph.cardRect=it})
 
                     // Column, not Box: PlayerProgressSlider emits the track and the timestamp
                     // row as two siblings, so a Box would stack the timestamps on top of the
@@ -1966,7 +1968,7 @@ private fun PlayerSheet(
                 onBackgroundStyle = { if (isFlagship) flagshipBackground = it else classicBackground = it },
                 menuLayout = menuLayout,
                 seekBarStyle = seekBarStyle,
-                endTimestamp = endTimestamp,
+                endTimestamp = if(isFlow) {if(flowOptions.remainingTime) com.mochyy.mochymusic.constants.PlayerEndTimestamp.TIME_LEFT else com.mochyy.mochymusic.constants.PlayerEndTimestamp.END_TIME} else endTimestamp,
                 barStyles = if(isFlow) listOf(PlayerBottomBarStyle.VOLUME) else PlayerBottomBarStyle.entries,
                 barStyle = barStyle,
                 onBarStyle = onBarStyle,
