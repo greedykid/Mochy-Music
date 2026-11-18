@@ -16,8 +16,8 @@ class DrizzyDesignTest {
     @Test fun customPortraitAndLandscapeRoundTripIndependently() {
         val d=DrizzyDesign().let { it.copy(portrait=it.portrait.change("title",DrizzyPart(size=31f,color="#AABBCC")),landscape=it.landscape.copy(background="#000000")) }
         assertEquals(d,DrizzyDesign.decode(DrizzyDesign.encode(d)))
-        assertEquals(31f,d.portrait.part("title").size)
-        assertEquals(25f,d.landscape.part("title").size)
+        assertEquals(31f,d.portrait.part("title").size,0f)
+        assertEquals(25f,d.landscape.part("title").size,0f)
     }
     @Test fun importingMalformedValuesCannotHideRecoveryOrBreakLayout() {
         val bad=DrizzyDesign(portrait=DrizzyLayout(order=listOf("lyrics","lyrics","unknown"),transport=listOf("play","play"),padding=-5f,
@@ -26,9 +26,9 @@ class DrizzyDesignTest {
         assertEquals(DrizzyDesign.sections.toSet(),d.order.toSet())
         assertEquals(d.order.size,d.order.distinct().size)
         assertEquals(5,d.transport.size)
-        assertEquals(0f,d.padding)
-        assertEquals(1f,d.part("progress").width)
-        assertEquals(2f,d.part("progress").size)
+        assertEquals(0f,d.padding,0f)
+        assertEquals(1f,d.part("progress").width,0f)
+        assertEquals(2f,d.part("progress").size,0f)
         assertEquals("#FFFFFF",d.part("progress").color)
         assertFalse("unknown" in d.parts)
     }

@@ -68,7 +68,7 @@ internal fun DrizzyPlayerStyle(
     val position = rememberLivePosition(animated = !preview)
     val duration = rememberDurationMs()
     val seconds = rememberPlayedSeconds(position)
-    val lines = rememberStyleLyrics(readings = !preview).lines
+    val lyrics = rememberStyleLyrics(readings = !preview)
     val audio = rememberSkinAudio(needed = true, preview = preview)
     val showing = rememberStyleShowing()
     val volume = rememberMusicVolume(listening = !preview && showing())
@@ -77,9 +77,12 @@ internal fun DrizzyPlayerStyle(
     val interactive = LocalStyleInteractive.current
     val transport = connection?.uiState?.transportState?.collectAsState()?.value
     val info = connection?.uiState?.trackInfo?.collectAsState()?.value
+    val lines = lyrics.lines.takeIf { lyrics.mediaId == info?.mediaId }.orEmpty()
     val previewLines = remember { listOf(LyricsEntry(0,"The lights are fading slowly"), LyricsEntry(84000,"I hear the night around me"), LyricsEntry(110000,"And let the silence carry on")) }
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val wide = orientationOverride ?: (maxWidth > maxHeight)
+        val screenWidth = maxWidth
+        val screenHeight = maxHeight
+        val wide = orientationOverride ?: (screenWidth > screenHeight)
         val layout = design.layout(wide)
         val base = if (layout.dynamic) tones.remaining else drizzyColor(layout.background)
         val density = LocalDensity.current
@@ -128,7 +131,7 @@ internal fun DrizzyPlayerStyle(
                                 .alpha(if(part.visible)part.opacity else .25f).then(edit)) {
                                 when(id) {
                                     "cover" -> Box {
-                                        val height=if(part.height>0)part.height.dp else maxWidth
+                                        val height=if(part.height>0)part.height.dp else minOf(screenWidth,screenHeight*0.42f)
                                         AsyncImage(track.artwork,"Album artwork",contentScale=if(part.fit=="fit")ContentScale.Fit else ContentScale.Crop,
                                             modifier=Modifier.fillMaxWidth().height(height)
                                                 .then(if(part.shadow)Modifier.shadow(16.dp,RoundedCornerShape(part.radius.dp))else Modifier)
@@ -148,7 +151,7 @@ internal fun DrizzyPlayerStyle(
                                         listOf("love","menu").forEach { name -> DrizzyButton(name,layout.part(name),transport?.isPlaying==true,info?.liked==true,preview,onSelect,perform) }
                                     }
                                     "progress" -> Column {
-                                        DrizzyBar(part,{(position.positionMs().toFloat()/duration).coerceIn(0f,1f)},"Song position",!preview&&onSelect==null,
+                                        DrizzyBar(part,{(position.positionMs().toFloat()/duration).coerceIn(0f,1f)},"Song position",!preview&&onSelect==null&&duration>1,
                                             onChange={connection?.seekTo((it*duration).toLong().coerceIn(0,duration))})
                                         if(part.times)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                                             Text(makeTimeString(seconds*1000),color=drizzyColor(part.secondary),fontSize=11.sp)
@@ -170,7 +173,7 @@ internal fun DrizzyPlayerStyle(
                                                 modifier=Modifier.size(44.dp).clickable(enabled=!preview&&onSelect==null){perform("lyrics")}.padding(10.dp))
                                         }
                                         DrizzyLyrics(if(preview)previewLines else lines,part,position,preview,duration,onSelect==null){time->
-                                            if(!preview&&interactive())connection?.seekTo((time-(connection.lyricsOffsetMs.value)).coerceIn(0,duration))
+                                            if(!preview&&interactive())connection?.let{it.seekTo((time-it.lyricsOffsetMs.value).coerceIn(0,duration))}
                                         }
                                     }
                                     "volume" -> Row(verticalAlignment=Alignment.CenterVertically) {
@@ -201,7 +204,7 @@ internal fun DrizzyPlayerStyle(
 
 @Composable
 private fun DrizzyText(value:String,part:DrizzyPart,modifier:Modifier=Modifier) {
-    Text(value,modifier.fillMaxWidth(),color=drizzyColor(part.color),fontSize=part.size.coerceIn(8f,72f).sp,
+    Text(value,modifier.fillMaxWidth(),color=drizzyColor(part.color),fontSize=part.size.coerceIn(8f,96f).sp,
         fontWeight=if(part.bold)FontWeight.Bold else FontWeight.Normal,maxLines=part.lines,overflow=TextOverflow.Ellipsis,
         textAlign=when(part.align){"center"->TextAlign.Center;"end"->TextAlign.End;else->TextAlign.Start})
 }
@@ -224,7 +227,7 @@ private fun DrizzyButton(id:String,part:DrizzyPart,playing:Boolean,liked:Boolean
                 "play"->AnimatedPlayGlyph(playing,tint,iconSize*.48f)
                 "previous","next"->AnimatedSkipGlyph(cycle,action=="previous",tint,iconSize)
                 "back10","forward10"->Icon(painterResource(R.drawable.flagship_ten_seconds),null,tint=tint,
-                    modifier=Modifier.size(iconSize).graphicsLayer{scaleX=if(action=="back10")-1f else 1f})
+                    modifier=Modifier.size(iconSize))
                 else->Icon(painterResource(when(action){
                     "like"->if(liked)R.drawable.favorite else R.drawable.favorite_border
                     "lyrics"->R.drawable.lyrics;"queue"->R.drawable.queue_music;"device"->R.drawable.headset_applemusic
@@ -276,7 +279,7 @@ private fun DrizzyLyrics(lines:List<LyricsEntry>,part:DrizzyPart,position:LivePo
         modifier=Modifier.fillMaxWidth().height(part.height.coerceAtLeast(60f).dp)){
         items(lines.size,key={it}){i->
             val active=i==current
-            Text(lines[i].text,color=drizzyColor(if(active)part.color else part.secondary),fontSize=part.size.coerceIn(8f,60f).sp,
+            Text(lines[i].text,color=drizzyColor(if(active)part.color else part.secondary),fontSize=part.size.coerceIn(8f,96f).sp,
                 fontWeight=if(active&&part.bold)FontWeight.Bold else FontWeight.Normal,maxLines=part.lines,overflow=TextOverflow.Ellipsis,
                 textAlign=when(part.align){"center"->TextAlign.Center;"end"->TextAlign.End;else->TextAlign.Start},
                 modifier=Modifier.fillMaxWidth().clickable(enabled=!preview&&clickable&&duration>1){onSeek(lines[i].time)}.padding(vertical=4.dp))

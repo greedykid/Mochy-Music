@@ -40,7 +40,7 @@ jobs:
       - name: Set Up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-disabled: true
+          cache-disabled: false
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
