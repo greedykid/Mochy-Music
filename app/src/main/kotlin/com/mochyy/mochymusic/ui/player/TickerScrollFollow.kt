@@ -35,8 +35,8 @@ internal fun tickerScrollPlan(
     if (future == words.lastIndex && next.right-next.left+pad*2<=viewport) target = if (next.rtl) 0f else overflow
     // Very long words cannot fit whole: follow the sung part instead of oscillating between edges.
     val fits = current.right-current.left+pad*2 <= viewport
-    val minimum = if(fits) (current.right+pad-viewport).coerceIn(0f,overflow) else 0f
-    val maximum = if(fits) (current.left-pad).coerceIn(minimum,overflow) else overflow
+    val minimum = (if(fits) current.right+pad-viewport else head-viewport*.85f).coerceIn(0f,overflow)
+    val maximum = (if(fits) current.left-pad else head-viewport*.15f).coerceIn(minimum,overflow)
     val response = when { duration < 200 -> .035f; duration < 400 -> .055f; else -> .13f }
     return TickerScrollPlan(target.coerceIn(minimum,maximum),minimum,maximum,response)
 }

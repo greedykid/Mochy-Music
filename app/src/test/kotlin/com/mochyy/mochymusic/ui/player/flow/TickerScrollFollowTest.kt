@@ -46,7 +46,9 @@ class TickerScrollFollowTest {
     @Test fun oversizedWordDoesNotCreateInvalidClamps() {
         val p=tickerScrollPlan(listOf(TickerWordBounds(0,200,0f,1000f)),100,200f,1000f)
         assertTrue(p.target in 0f..800f)
-        assertTrue(TickerScrollFollower().advance(p,.016f,200f).isFinite())
+        val value=TickerScrollFollower().advance(p,.016f,200f)
+        assertTrue(value.isFinite())
+        assertTrue(500f-value in 30f..170f)
     }
     @Test fun rtlFinishesAtLeftEndOfText() {
         val words=listOf(TickerWordBounds(0,100,400f,500f,true),TickerWordBounds(100,200,0f,100f,true))
