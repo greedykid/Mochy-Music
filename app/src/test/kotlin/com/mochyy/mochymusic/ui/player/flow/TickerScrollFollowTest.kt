@@ -30,6 +30,12 @@ class TickerScrollFollowTest {
         assertEquals(800f,scroll,.01f)
         assertTrue(rap.last().right-scroll<=200f)
     }
+    @Test fun nearlyFullWidthLastWordUsesLessPaddingInsteadOfGettingClipped() {
+        val words=listOf(TickerWordBounds(0,100,0f,20f),TickerWordBounds(100,200,20f,200f))
+        val plan=tickerScrollPlan(words,100,190f,200f)
+        assertEquals(10f,plan.target,.01f)
+        assertTrue(words.last().right-plan.minimum<=190f)
+    }
     @Test fun slowWordsKeepGentlerMotion() {
         val slow=listOf(TickerWordBounds(0,2000,300f,400f),TickerWordBounds(2000,4000,400f,500f))
         assertTrue(tickerScrollPlan(slow,1000,200f,500f).followSeconds > tickerScrollPlan(rap,400,200f,1000f).followSeconds)

@@ -24,7 +24,7 @@ internal fun tickerScrollPlan(
     val leadMs = (duration * .65f).toLong().coerceIn(70L, 160L)
     val future = words.indexOfLast { it.startMs <= positionMs + leadMs }.coerceAtLeast(index)
     val next = words[future]
-    val pad = minOf(16f, viewport * .06f)
+    val pad = minOf(16f, viewport * .06f, ((viewport-(current.right-current.left))/2f).coerceAtLeast(0f))
     val fraction = ((positionMs - current.startMs).toFloat() / duration).coerceIn(0f, 1f)
     val head = if (current.rtl) current.right - (current.right-current.left)*fraction
         else current.left + (current.right-current.left)*fraction
@@ -32,9 +32,9 @@ internal fun tickerScrollPlan(
     var target = head - focus
     target = if (current.rtl) minOf(target, next.left - viewport*.14f)
         else maxOf(target, next.right - viewport*.86f)
-    if (future == words.lastIndex && next.right-next.left+pad*2<=viewport) target = if (next.rtl) 0f else overflow
+    if (future == words.lastIndex && next.right-next.left<=viewport) target = if (next.rtl) 0f else overflow
     // Very long words cannot fit whole: follow the sung part instead of oscillating between edges.
-    val fits = current.right-current.left+pad*2 <= viewport
+    val fits = current.right-current.left <= viewport
     val minimum = (if(fits) current.right+pad-viewport else head-viewport*.85f).coerceIn(0f,overflow)
     val maximum = (if(fits) current.left-pad else head-viewport*.15f).coerceIn(minimum,overflow)
     val response = when { duration < 200 -> .035f; duration < 400 -> .055f; else -> .13f }
