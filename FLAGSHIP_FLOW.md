@@ -38,3 +38,11 @@ Current-line changes use a short fade/vertical slide. Backward seeks reverse the
 Flagship Flow opts in to centered circular press feedback for native playback and song-info buttons. The footer shortcuts, lyric chevron and Flow settings button use the same feedback. Held skip controls retain their speed badges and hold behavior. Other styles keep their original feedback. Animation jobs stop with their indication nodes.
 
 The companion Looks 1.1 ZIP still selects `FLAGSHIP_FLOW`; the animation code requires the updated fork APK, not just a manifest update.
+
+## Scroll and synchronization update
+
+Flow's compact-screen scroll container now sits inside its visibility layer and stops accepting scroll while a lyrics/queue page is open. The hidden ticker also lets touches through. This keeps page lists from competing with an invisible control container.
+
+The single-line ticker reads the same progress state and per-song offset as the full lyrics page, including seek/pause and offset changes. Untimed lyrics keep the full-lyrics shortcut. Manual lyric scrolling suspends follow until the Follow lyrics button or a timed line is tapped; a line tap compensates for the song offset when seeking. Queue drag handles and list state are preserved.
+
+CI adds six timing regression cases; actual touch behavior still needs device verification. The Looks v1.1 selector remains compatible without reimporting.

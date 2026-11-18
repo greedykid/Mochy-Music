@@ -1414,7 +1414,7 @@ private fun PlayerSheet(
                     .widthIn(max = 600.dp)
                     .fillMaxWidth()
                     .padding(bottom = belowControls + transportGap.coerceAtLeast(0.dp))
-                    .then(if(isFlow) Modifier.heightIn(max=(screenHeight-belowControls-statusBarTopInset).coerceAtLeast(120.dp)).verticalScroll(rememberScrollState()) else Modifier)
+                    .then(if(isFlow) Modifier.heightIn(max=(screenHeight-belowControls-statusBarTopInset).coerceAtLeast(120.dp)) else Modifier)
                     // where the editor's hold put them; only placed, so a drag never recomposes
                     .offset { androidx.compose.ui.unit.IntOffset(0, layoutTweaks.controlsOffset().roundToInt()) }
                     .graphicsLayer {
@@ -1429,6 +1429,9 @@ private fun PlayerSheet(
                         letTouchesThroughWhenHidden()
                     }
 
+                    // The visibility layer must wrap the scroll node too. Otherwise the invisible
+                    // scroll container still wins hit testing over the lyrics/queue beneath it.
+                    .then(if(isFlow) Modifier.verticalScroll(rememberScrollState(), enabled = !lyricsMounted && transition.preparing == PlayerPage.NONE && !studioEngaged) else Modifier)
                     .onGloballyPositioned { coords ->
                         if (coords.parentLayoutCoordinates == null) return@onGloballyPositioned
 
@@ -1655,7 +1658,8 @@ private fun PlayerSheet(
                         }
                     }
 
-                    if(isFlow) FlowLyricTicker(flowOptions,sheetShowing && !studioEngaged,{transition.open(PlayerPage.LYRICS)},onPageFrom={morph.cardRect=it})
+                    if(isFlow) FlowLyricTicker(flowOptions,sheetShowing && !studioEngaged && !lyricsMounted,{transition.open(PlayerPage.LYRICS)},
+                        modifier=Modifier.graphicsLayer { alpha=1f-lyricsProgress; letTouchesThroughWhenHidden() },onPageFrom={morph.cardRect=it})
 
                     // Column, not Box: PlayerProgressSlider emits the track and the timestamp
                     // row as two siblings, so a Box would stack the timestamps on top of the

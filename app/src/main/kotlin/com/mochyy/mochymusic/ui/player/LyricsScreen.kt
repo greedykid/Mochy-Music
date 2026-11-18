@@ -6,6 +6,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -186,7 +188,6 @@ internal fun recenterEasingFor(style: com.mochyy.mochymusic.constants.LyricsMoti
 
 private const val ScrollDirectionThresholdPx = 6L
 
-private const val IdleRecenterDelayMs = 3_500L
 
 private const val TopFadeFraction = 0.10f
 
@@ -366,8 +367,9 @@ fun LyricsScreen(
 
     var isAutoScrolling by remember { mutableStateOf(false) }
 
+    val dragging by listState.interactionSource.collectIsDraggedAsState()
     val userScrolling by remember {
-        derivedStateOf { listState.isScrollInProgress && !isAutoScrolling }
+        derivedStateOf { dragging || (listState.isScrollInProgress && !isAutoScrolling) }
     }
 
     val suppressEffects = userScrolling || isSheetDragging || isMorphing
@@ -376,12 +378,9 @@ fun LyricsScreen(
         if (userScrolling) followPlayback = false
     }
 
-    LaunchedEffect(userScrolling, followPlayback) {
-        if (!followPlayback && !userScrolling) {
-            delay(IdleRecenterDelayMs)
-            followPlayback = true
-        }
-    }
+    // Reading another verse should not snap back after a timer. Resume explicitly, or when
+    // seeking by tapping a line. A real drag also cancels follow during an automatic recenter.
+    LaunchedEffect(mediaMetadata?.id) { followPlayback = true }
 
     var immersive by remember { mutableStateOf(false) }
 
@@ -569,7 +568,12 @@ fun LyricsScreen(
                     .clickable { if (immersive) immersive = false else onClose() }
             )
 
-            Spacer(modifier = Modifier.width(18.dp))
+            Spacer(modifier = Modifier.weight(1f))
+            if (!unsynced && !followPlayback && lines.isNotEmpty()) {
+                TextButton(onClick = { followPlayback = true }) {
+                    Text(stringResource(R.string.follow_lyrics), color = Color.White)
+                }
+            }
 
             // No menu button up here: on the lyrics page the options button takes the chevron's
             // slot next to the seek bar (BottomSheetPlayer), within reach of the thumb.
@@ -793,7 +797,7 @@ fun LyricsScreen(
                                     onClick = {
                                         // Untimed lines have nowhere to seek to.
                                         if (!unsynced) {
-                                            playerConnection.player.seekTo(entry.time)
+                                            playerConnection.player.seekTo((entry.time - lyricsOffsetMs).coerceAtLeast(0L))
                                             followPlayback = true
                                         }
                                     },

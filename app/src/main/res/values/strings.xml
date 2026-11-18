@@ -432,4 +432,5 @@
     <string name="error_stream_unavailable_title">Couldn\'t play this track</string>
     <string name="playback_error_channel_name">Playback errors</string>
     <string name="playing_music_video_audio">YouTube wouldn\'t play this song, so you\'re hearing its music video instead</string>
+    <string name="follow_lyrics">Follow lyrics</string>
 </resources>

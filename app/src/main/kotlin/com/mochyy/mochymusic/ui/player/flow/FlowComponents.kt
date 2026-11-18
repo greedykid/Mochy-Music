@@ -41,10 +41,8 @@ import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.lyrics.LyricsUtils
 import com.mochyy.mochymusic.ui.player.rememberMusicVolume
 import com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction
-import com.mochyy.mochymusic.ui.player.styles.rememberLivePosition
 import com.mochyy.mochymusic.ui.player.styles.rememberStyleLyrics
 import com.mochyy.mochymusic.ui.player.styles.rememberSkinAudio
-import com.mochyy.mochymusic.ui.player.styles.withLyricsOffset
 
 internal fun flowColor(raw:String)=runCatching{Color(android.graphics.Color.parseColor(raw))}.getOrDefault(Color.White)
 
@@ -67,8 +65,13 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     val lyrics=rememberStyleLyrics(readings=active&&!preview)
     val info=connection?.uiState?.trackInfo?.collectAsState()?.value
     val lines=lyrics.lines.takeIf{lyrics.mediaId==info?.mediaId}.orEmpty()
-    val clock=rememberLivePosition(animated=active&&!preview).withLyricsOffset()
-    val index by remember(lines,clock){derivedStateOf{LyricsUtils.findCurrentLineIndex(lines,clock.positionMs())}}
+    // Use the same authoritative progress and offset as LyricsScreen. A line only needs the
+    // 66 ms playback updates; a cached drawing clock could hold a stale line on pause/offset edits.
+    val progress=connection?.progressState?.collectAsState()
+    val offset=connection?.lyricsOffsetMs?.collectAsState()
+    val index by remember(lines,progress,offset){derivedStateOf{
+        flowLyricIndex(lines,progress?.value?.position?:0L,offset?.value?.toLong()?:0L)
+    }}
     val origin=remember{arrayOfNulls<Rect>(1)}
     val line=if(preview)"Your current lyric line appears here" else lines.getOrNull(index)?.text?:"Open lyrics"
     val frame=FlowLyricFrame(info?.mediaId,index,line)
