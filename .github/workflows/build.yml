@@ -33,7 +33,8 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools platforms;android-37 ndk;27.0.12077973
+          cmdline-tools-version: 16111833
+          packages: platform-tools platforms;android-37.0 ndk;27.0.12077973
           log-accepted-android-sdk-licenses: false
 
       - name: Set Up Gradle
