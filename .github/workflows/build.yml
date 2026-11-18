@@ -12,10 +12,14 @@ on:
   pull_request:
     branches: [ '**' ]
 
+permissions:
+  contents: read
+
 jobs:
   build_debug:
     name: Build Universal GMS Debug
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v5
@@ -25,6 +29,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Set Up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -64,3 +71,4 @@ jobs:
           path: app/build/outputs/apk/universalGms/debug/*.apk
           # a debug apk is only for trying the build, after a week it's just eating actions storage
           retention-days: 7
+          if-no-files-found: error
