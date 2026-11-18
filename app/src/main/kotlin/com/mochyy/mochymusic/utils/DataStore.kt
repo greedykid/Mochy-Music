@@ -97,24 +97,33 @@ inline fun <reified T : Enum<T>> enumPreference(
     defaultValue: T,
 ) = ReadOnlyProperty<Any?, T> { _, _ -> context.dataStore[key].toEnum(defaultValue) }
 
+/** Optional, explicitly typed presentation overrides supplied by a player style. */
+val LocalPreferenceKeyOverrides = androidx.compose.runtime.compositionLocalOf<Map<Preferences.Key<*>, Preferences.Key<*>>> { emptyMap() }
+
+@Suppress("UNCHECKED_CAST")
+@Composable
+fun <T> resolvedPreferenceKey(key: Preferences.Key<T>): Preferences.Key<T> =
+    (LocalPreferenceKeyOverrides.current[key] as? Preferences.Key<T>) ?: key
+
 @Composable
 fun <T> rememberPreference(
     key: Preferences.Key<T>,
     defaultValue: T,
 ): MutableState<T> {
+    val resolvedKey = resolvedPreferenceKey(key)
     val store = LocalContext.current.applicationContext.dataStore
 
     PreferencesCache.current(store)
 
-    val valueState = remember(key, defaultValue) {
-        derivedStateOf { PreferencesCache.snapshot.value[key] ?: defaultValue }
+    val valueState = remember(resolvedKey, defaultValue) {
+        derivedStateOf { PreferencesCache.snapshot.value[resolvedKey] ?: defaultValue }
     }
 
-    return remember(key, store) {
+    return remember(resolvedKey, store) {
         object : MutableState<T> {
             override var value: T
                 get() = valueState.value
-                set(value) = PreferencesCache.set(store, key, value)
+                set(value) = PreferencesCache.set(store, resolvedKey, value)
 
             override fun component1() = value
 
@@ -128,18 +137,19 @@ inline fun <reified T : Enum<T>> rememberEnumPreference(
     key: Preferences.Key<String>,
     defaultValue: T,
 ): MutableState<T> {
+    val resolvedKey = resolvedPreferenceKey(key)
     val store = LocalContext.current.applicationContext.dataStore
     PreferencesCache.current(store)
 
-    val valueState = remember(key, defaultValue) {
-        derivedStateOf { PreferencesCache.snapshot.value[key].toEnum(defaultValue) }
+    val valueState = remember(resolvedKey, defaultValue) {
+        derivedStateOf { PreferencesCache.snapshot.value[resolvedKey].toEnum(defaultValue) }
     }
 
-    return remember(key, store) {
+    return remember(resolvedKey, store) {
         object : MutableState<T> {
             override var value: T
                 get() = valueState.value
-                set(value) = PreferencesCache.set(store, key, value.name)
+                set(value) = PreferencesCache.set(store, resolvedKey, value.name)
 
             override fun component1() = value
 

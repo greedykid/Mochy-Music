@@ -691,6 +691,7 @@ enum class PlayerCoverStyle {
 enum class PlayerStyle(val displayName: String, val selectorName: String) {
     // the flagship as it is now: frosted cover fade, moving cover colours, the new buttons and bottom bar
     FLAGSHIP("Flagship", "Flagship"),
+    FLAGSHIP_FLOW("Flagship Flow", "Flagship Flow"),
     DRIZZY("Drizzy", "Drizzy"),
     // the flagship before its layout refresh, kept as a variant under it in the selector
     CLASSIC("Classic", "Classic"),
@@ -710,16 +711,16 @@ enum class PlayerStyle(val displayName: String, val selectorName: String) {
     // a look module's own player, drawn from its layout; kept last so the others keep their places, and only offered while such a module is on
     MODULE("Module", "Module");
 
-    val editable: Boolean get() = this == DRIZZY || this == FLAGSHIP || this == CLASSIC || this == TURNTABLE || this == POSTER || this == IPOD || isBedside
+    val editable: Boolean get() = this == FLAGSHIP_FLOW || this == DRIZZY || this == FLAGSHIP || this == CLASSIC || this == TURNTABLE || this == POSTER || this == IPOD || isBedside
 
     // the two nightstand styles share their sheet, their night look and their lock screen rules
     val isBedside: Boolean get() = this == BEDSIDE || this == BEDSIDE_TILES
 
     /** drawn by the flagship's own player (cover, controls, card), not a design of its own */
-    val flagshipFamily: Boolean get() = this == FLAGSHIP || this == CLASSIC || this == TURNTABLE
+    val flagshipFamily: Boolean get() = this == FLAGSHIP_FLOW || this == FLAGSHIP || this == CLASSIC || this == TURNTABLE
 
     // the two flagships the full editor works on: cover, middle part, controls and bottom bar
-    val hasFullEditor: Boolean get() = this == FLAGSHIP || this == CLASSIC
+    val hasFullEditor: Boolean get() = this == FLAGSHIP_FLOW || this == FLAGSHIP || this == CLASSIC
 
     // the styles whose menu has a rotate button, each with a landscape layout of its own to turn into
     val turnable: Boolean get() = this == TURNTABLE || this == POSTER || this == TIMELINE || this == LYRICS || this == MODULE || isBedside
@@ -743,6 +744,7 @@ enum class PlayerStyle(val displayName: String, val selectorName: String) {
         // the selector's columns, each look with its variants stacked under it, a swipe down away
         val selectorColumns: List<List<PlayerStyle>> = listOf(
             listOf(FLAGSHIP, CLASSIC),
+            listOf(FLAGSHIP_FLOW),
             listOf(DRIZZY),
             listOf(TURNTABLE),
             listOf(VIDEO),

@@ -192,7 +192,7 @@ fun Modifier.studioBarLayer(parts: StudioParts?, slot: (StudioAnchors) -> Mutabl
  * down (the cover zooming with them), and the card is pulled taller or shorter.
  */
 @Composable
-fun EditTiles(parts: StudioParts, modifier: Modifier = Modifier) {
+fun EditTiles(parts: StudioParts, modifier: Modifier = Modifier, onEditBar: (() -> Unit)? = null) {
     val studio = parts.studio
     val editing by remember(studio) { derivedStateOf { studio.editing } }
     if (!editing) return
@@ -228,7 +228,7 @@ fun EditTiles(parts: StudioParts, modifier: Modifier = Modifier) {
             TileTarget({ parts.layout().middleTile }, controlsHold) { studio.go(StudioStage.MIDDLE) }
             // the seek bar's tile is the handle; the buttons follow it on their own, so theirs only opens its sheet
             TileTarget({ parts.layout().controlsTile }) { studio.openSheet(StudioSheet.CONTROLS) }
-            if (hasBar) TileTarget({ parts.layout().barTile ?: Rect.Zero }, cardHold) { studio.go(StudioStage.BAR) }
+            if (hasBar) TileTarget({ parts.layout().barTile ?: Rect.Zero }, cardHold) { onEditBar?.invoke() ?: studio.go(StudioStage.BAR) }
         }
     }
 }

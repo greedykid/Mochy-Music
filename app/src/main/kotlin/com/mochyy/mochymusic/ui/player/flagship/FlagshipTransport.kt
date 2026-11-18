@@ -93,6 +93,7 @@ fun FlagshipTransportRow(
     modifier: Modifier = Modifier,
     queueOpen: Boolean = false,
     onQueue: () -> Unit = {},
+    iconScale: Float = 1f,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val transportState by playerConnection.uiState.transportState.collectAsState()
@@ -114,7 +115,7 @@ fun FlagshipTransportRow(
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         // one design unit, so the whole row keeps the design's proportions on any screen
-        val unit = (maxWidth / DesignWidth).coerceIn(0.27.dp, 0.42.dp)
+        val unit = (maxWidth / DesignWidth).coerceIn(0.27.dp, 0.42.dp) * iconScale.coerceIn(.65f,1.3f)
         when (layout) {
             FlagshipTransportLayout.THREE -> {
                 SlotRow(ThreeCentres) {

@@ -78,8 +78,13 @@ fun StudioSheets(
     // set on the new flagship, whose controls sheet picks its button layout instead of a button style
     transportLayout: FlagshipTransportLayout? = null,
     onTransportLayout: (FlagshipTransportLayout) -> Unit = {},
+    flow: Boolean = false,
 ) {
     val sheet = studio.sheet ?: return
+    if(flow && sheet in setOf(StudioSheet.FLOW,StudioSheet.CONTROLS,StudioSheet.SEEKBAR,StudioSheet.END_TIME)) {
+        com.mochyy.mochymusic.ui.player.flow.FlowOptionsSheet {studio.sheet=null}
+        return
+    }
     MenuSheetSurface(onDismiss = { studio.sheet = null }, wrapHeight = true) { _ ->
         // every text in the sheets takes the studio's type (Inter at the app's tracking)
         androidx.compose.runtime.CompositionLocalProvider(
@@ -238,6 +243,7 @@ fun StudioSheets(
             StudioSheet.POSTER -> PosterOptions()
             StudioSheet.IPOD -> IpodOptions()
             StudioSheet.BEDSIDE -> BedsideOptions()
+            StudioSheet.FLOW -> Unit
             StudioSheet.DRIZZY -> Unit // Drizzy has its own full-screen component editor.
 
         }

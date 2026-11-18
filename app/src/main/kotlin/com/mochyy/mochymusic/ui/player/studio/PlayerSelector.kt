@@ -345,11 +345,17 @@ fun PlayerSelectorOverlay(
                     ) {
                         // every card built, the live one too: picking a style hands over to its
                         // card, which mustn't be built in the frame it has to cover the player
+                        androidx.compose.runtime.CompositionLocalProvider(
+                            com.mochyy.mochymusic.utils.LocalPreferenceKeyOverrides provides
+                                (if(style==PlayerStyle.FLAGSHIP_FLOW) com.mochyy.mochymusic.ui.player.flow.FlowPreferenceOverrides else emptyMap())
+                        ) {
                         when (style) {
+                            PlayerStyle.FLAGSHIP_FLOW -> FlagshipPreview(flagship=true,flow=true)
                             PlayerStyle.FLAGSHIP -> FlagshipPreview(flagship = true)
                             PlayerStyle.CLASSIC -> FlagshipPreview()
                             PlayerStyle.TURNTABLE -> FlagshipPreview(turntable = true)
                             else -> AlternatePlayerStyle(style = style, actions = previewActions, preview = true, modifier = Modifier.fillMaxSize())
+                        }
                         }
                     }
                 }

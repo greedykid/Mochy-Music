@@ -95,12 +95,14 @@ fun PlayerProgressSlider(
     /** On the bar and the end time themselves: the editor lifts them off to edit them. */
     seekBarModifier: Modifier = Modifier,
     endTimeModifier: Modifier = Modifier,
+    flowOptions: com.mochyy.mochymusic.ui.player.flow.FlowOptions? = null,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
-    val endTimestamp by com.mochyy.mochymusic.utils.rememberEnumPreference(
+    val storedEndTimestamp by com.mochyy.mochymusic.utils.rememberEnumPreference(
         com.mochyy.mochymusic.constants.PlayerEndTimestampKey,
         com.mochyy.mochymusic.constants.PlayerEndTimestamp.END_TIME,
     )
+    val endTimestamp = if(flowOptions==null) storedEndTimestamp else if(flowOptions.remainingTime) com.mochyy.mochymusic.constants.PlayerEndTimestamp.TIME_LEFT else com.mochyy.mochymusic.constants.PlayerEndTimestamp.END_TIME
     val progressFlow = playerConnection.uiState.progressState
     // only the bar and the time texts read the position, so a tick redraws them and not the whole slider
     val progress = remember { mutableStateOf(progressFlow.value) }
@@ -216,7 +218,7 @@ fun PlayerProgressSlider(
         animationSpec = SeekBarExpandSpring,
         label = "playerSeekExpand",
     )
-    val timeColor = remember(expand) { ColorProducer { Color.White.copy(alpha = TimeRestAlpha + (1f - TimeRestAlpha) * expand.value) } }
+    val timeColor = remember(expand,flowOptions?.activeColor) { ColorProducer { (flowOptions?.let{com.mochyy.mochymusic.ui.player.flow.flowColor(it.activeColor)} ?: Color.White).copy(alpha = TimeRestAlpha + (1f - TimeRestAlpha) * expand.value) } }
 
     Row(
         modifier = modifier
@@ -228,7 +230,11 @@ fun PlayerProgressSlider(
             interactionSource = trackInteractionSource,
             thumb = { Spacer(modifier = Modifier.size(0.dp)) },
             track = {
-                com.mochyy.mochymusic.ui.component.SeekBarTrack(
+                if(flowOptions!=null) com.mochyy.mochymusic.ui.player.flow.FlowTrack(
+                    fraction={fill.fraction},thickness=flowOptions.trackThickness,
+                    active=com.mochyy.mochymusic.ui.player.flow.flowColor(flowOptions.activeColor),
+                    inactive=com.mochyy.mochymusic.ui.player.flow.flowColor(flowOptions.inactiveColor),
+                ) else com.mochyy.mochymusic.ui.component.SeekBarTrack(
                     style = seekBarStyle,
                     fractionProvider = { fill.fraction },
                     activeColor = barActiveColor,
@@ -253,7 +259,7 @@ fun PlayerProgressSlider(
         )
     }
 
-    Row(
+    if(flowOptions?.showTimes!=false) Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

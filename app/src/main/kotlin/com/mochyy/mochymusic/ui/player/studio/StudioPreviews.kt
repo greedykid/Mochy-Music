@@ -1,5 +1,6 @@
 package com.mochyy.mochymusic.ui.player.studio
 
+import com.mochyy.mochymusic.ui.player.flow.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.graphicsLayer
@@ -161,8 +162,10 @@ internal fun FlagshipPreview(
     turntable: Boolean = false,
     // the new flagship: its own background and bar, its buttons, the cover melting into its colours
     flagship: Boolean = false,
+    flow: Boolean = false,
 ) {
     val connection = LocalPlayerConnection.current ?: return
+    val flowOptions = rememberFlowOptions()
     val track by connection.uiState.trackInfo.collectAsState()
     val transport by connection.uiState.transportState.collectAsState()
     val queue by connection.uiState.queueState.collectAsState()
@@ -185,8 +188,8 @@ internal fun FlagshipPreview(
     val statusTop = WindowInsets.stableStatusBars.asPaddingValues().calculateTopPadding()
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val edgeToEdge = coverStyle == PlayerCoverStyle.EDGE_TO_EDGE
-    val showVolumeBar = barStyle == PlayerBottomBarStyle.VOLUME
-    val showDeck = showBottomCard && barStyle == PlayerBottomBarStyle.STACK
+    val showVolumeBar = flow || barStyle == PlayerBottomBarStyle.VOLUME
+    val showDeck = !flow && showBottomCard && barStyle == PlayerBottomBarStyle.STACK
     BoxWithConstraints(modifier = modifier.fillMaxSize().inert()) {
         if (flagship && backgroundStyle == PlayerBackgroundStyle.AMBIENT) {
             // held still on the card, the live player's own clock isn't running here
@@ -239,6 +242,7 @@ internal fun FlagshipPreview(
 
         // what sits under the controls, by the live player's own sums, so the buttons land where they do there
         val belowControls = when {
+            flow -> flowBottomFootprint(flowOptions)+flowOptions.volumeGap.dp
             showVolumeBar && newBottomBar -> flagshipBarFootprint()
             showVolumeBar -> playerVolumeBarFootprint()
             showDeck -> PlayerDeckHeight
@@ -254,10 +258,10 @@ internal fun FlagshipPreview(
                     .padding(bottom = belowControls + TurntableControlsLift),
             )
         } else {
-            val drawShift = if (edgeToEdge) ControlsDrawShift else 0.dp
-            val transportGap = (maxHeight * 0.19f - 37.dp - belowControls + TransportGapAboveRow + drawShift) / 2f
-            val transportSpacer = (transportGap - SeekBarLift - drawShift).coerceAtLeast(0.dp)
-            val buttonsLift = (transportSpacer + SeekBarLift + drawShift - transportGap.coerceAtLeast(0.dp)) / 2f
+            val drawShift = if (!flow && edgeToEdge) ControlsDrawShift else 0.dp
+            val transportGap = if(flow) 0.dp else (maxHeight * 0.19f - 37.dp - belowControls + TransportGapAboveRow + drawShift) / 2f
+            val transportSpacer = if(flow)flowOptions.transportGap.dp else (transportGap - SeekBarLift - drawShift).coerceAtLeast(0.dp)
+            val buttonsLift = if(flow)0.dp else (transportSpacer + SeekBarLift + drawShift - transportGap.coerceAtLeast(0.dp)) / 2f
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -268,16 +272,22 @@ internal fun FlagshipPreview(
                     Spacer(Modifier.height(20.dp))
                     SongInfoRow()
                     Spacer(Modifier.height(16.dp))
-                    Column(modifier = Modifier.offset(y = -SeekBarLift)) { PlayerProgressSlider() }
+                    if(flow)FlowLyricTicker(flowOptions,false,{},preview=true)
+                    Column(modifier=Modifier.offset(y=if(flow)0.dp else -SeekBarLift)) {
+                        if(!flow||flowOptions.showProgress)PlayerProgressSlider(active=false,flowOptions=if(flow)flowOptions else null)
+                    }
                 }
                 Spacer(Modifier.height(transportSpacer))
                 Box(modifier = Modifier.offset(y = -buttonsLift)) {
-                    if (flagship) FlagshipTransportRow(layout = transportLayout) else PlayerTransportRow()
+                    if(flow) {
+                        if(flowOptions.showTransport)FlagshipTransportRow(layout=FlagshipTransportLayout.THREE,iconScale=flowOptions.iconScale)
+                    } else if (flagship) FlagshipTransportRow(layout = transportLayout) else PlayerTransportRow()
                 }
             }
         }
 
         when {
+            flow -> FlowBottomBar(flowOptions,{},Modifier.align(Alignment.BottomCenter).padding(bottom=flowBottomInset(flowOptions)),active=false,preview=true)
             showVolumeBar && newBottomBar -> FlagshipBottomBar(
                 isActive = { false },
                 onAction = {},

@@ -199,12 +199,12 @@ internal fun DrizzyEditor(actions: StyleActions, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun Toggle(label:String,value:Boolean,onChange:(Boolean)->Unit) {
+internal fun Toggle(label:String,value:Boolean,onChange:(Boolean)->Unit) {
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text(label,modifier=Modifier.weight(1f));Switch(checked=value,onCheckedChange=onChange)}
 }
 
 @Composable
-private fun NumberField(label:String,value:Float,range:ClosedFloatingPointRange<Float>,onChange:(Float)->Unit) {
+internal fun NumberField(label:String,value:Float,range:ClosedFloatingPointRange<Float>,onChange:(Float)->Unit) {
     var pending by remember(value){mutableFloatStateOf(value.coerceIn(range))}
     var typed by remember(value){mutableStateOf(if(value%1f==0f)value.toInt().toString()else "%.2f".format(java.util.Locale.US,value))}
     Column {
@@ -218,7 +218,7 @@ private fun NumberField(label:String,value:Float,range:ClosedFloatingPointRange<
 }
 
 @Composable
-private fun ColorField(label:String,value:String,onChange:(String)->Unit) {
+internal fun ColorField(label:String,value:String,onChange:(String)->Unit) {
     var text by remember(value){mutableStateOf(value)}
     val valid=text.matches(Regex("#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?"))
     Row(verticalAlignment=Alignment.CenterVertically){
