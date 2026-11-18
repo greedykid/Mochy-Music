@@ -10,10 +10,9 @@ class FlowLyricSyncTest {
         LyricsEntry(1_000, "First"), LyricsEntry(5_000, "Second"), LyricsEntry(10_000, "Third"),
     )
 
-    @Test fun followsFullPageTimingAcrossLineBoundaries() {
-        for (position in listOf(0L, 699L, 701L, 4_699L, 4_701L, 9_701L, 15_001L)) {
-            assertEquals(LyricsUtils.findCurrentLineIndex(lines, position), flowLyricIndex(lines, position, 0))
-        }
+    @Test fun followsAudioWithoutCuttingOffFastEndWords() {
+        val expected=mapOf(0L to -1, 999L to -1, 1_000L to 0, 4_999L to 0, 5_000L to 1, 10_000L to 2, 15_000L to 3)
+        expected.forEach { (position,index) -> assertEquals(index,flowLyricIndex(lines,position,0)) }
     }
     @Test fun seekingInEitherDirectionSelectsDestinationDirectly() {
         assertEquals(2, flowLyricIndex(lines, 11_000, 0))

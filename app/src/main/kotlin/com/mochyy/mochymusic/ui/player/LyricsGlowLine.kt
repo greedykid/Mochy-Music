@@ -1013,6 +1013,7 @@ internal class SweepProbe {
     /** The sweep's x in the text's own coordinates, 0 before it starts. */
     var headX = 0f
     var textWidth = 0f
+    var wordBounds: List<TickerWordBounds> = emptyList()
 }
 
 @Composable
@@ -1048,6 +1049,7 @@ internal fun KaraokeSweepText(
 ) {
     val wordMotion = motionStyle.risesWords
     val head = rememberKaraokeHead(text, words, positionProvider, wordMotion)
+    val followRanges = remember(text, words) { karaokeTimedRanges(text, words) }
 
     val hasRuby = !ruby.isNullOrEmpty()
     val style = MaterialTheme.typography.headlineSmall.copy(
@@ -1117,6 +1119,14 @@ internal fun KaraokeSweepText(
                 onTextLayout = {
                     layoutHolder[0] = it
                     probe?.textWidth = it.size.width.toFloat()
+                    if (probe != null && singleLine) {
+                        probe.wordBounds = followRanges.map { range ->
+                            val bounds = it.getPathForRange(range.start, range.end).getBounds()
+                            TickerWordBounds((range.startTime*1000).toLong(), (range.endTime*1000).toLong(),
+                                bounds.left, bounds.right,
+                                it.getBidiRunDirection(range.start) == androidx.compose.ui.text.style.ResolvedTextDirection.Rtl)
+                        }
+                    }
                 },
             )
 

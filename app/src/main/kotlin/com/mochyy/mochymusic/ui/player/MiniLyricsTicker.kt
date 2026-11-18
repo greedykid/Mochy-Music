@@ -87,15 +87,6 @@ private const val TickerMotionScale = 17f / 32f
 /** Soft edges where the line runs past the card. */
 private val TickerEdgeFade = 18.dp
 
-/**
- * How far into the card the sweep is kept while a long line slides. Past the middle, so the reader
- * still sees a little of what's coming.
- */
-private const val SweepKeepFraction = 0.62f
-
-/** Critically damped follow time of the sideways slide: it trails the sweep, never jumps. */
-private const val SlideFollowSec = 0.32f
-
 /** Interlude dots at card size. */
 private const val DotsScale = 0.5f
 
@@ -169,7 +160,7 @@ internal data class TickerSlot(val kind: Int, val index: Int) {
 
 internal fun tickerSlot(lines: List<LyricsEntry>, position: Long): TickerSlot {
     if (lines.isEmpty()) return TickerSlot(TickerSlot.EMPTY, -1)
-    val index = LyricsUtils.findCurrentLineIndex(lines, position)
+    val index = synchronizedTickerIndex(lines, position)
     if (index >= lines.size) return TickerSlot(TickerSlot.END, lines.lastIndex)
     if (index < 0) {
         return if (lines.first().time >= MinInterludeGapMs) {
@@ -492,7 +483,7 @@ internal fun TickerLine(
     morph: CardMorphState?,
     fontSize: androidx.compose.ui.unit.TextUnit = TickerFontSize,
     ink: Color = Color.White,
-    snapOnSeek: Boolean = false,
+    snapOnSeek: Boolean = true,
 ) {
     // the romanisation as the line when that's set, with its own timed pieces, so the sweep runs over it the same way
     val line = rememberShownLyric(entry).entry
@@ -505,44 +496,29 @@ internal fun TickerLine(
     val viewport = remember { mutableFloatStateOf(0f) }
     val scroll = remember(entry) { mutableFloatStateOf(0f) }
 
-    // The sideways slide: follows the sweep for a word-synced line, the clock for a line-synced
-    // one. A critically damped follow, so a sweep that jumps (a seek) still glides.
+    // Use measured word edges and timestamps, not a delayed probe from the previous draw.
     LaunchedEffect(entry, karaoke, lineEndMs, positionProvider, snapOnSeek) {
-        var value = 0f
-        var velocity = 0f
+        val follower = TickerScrollFollower()
         var lastMs = -1L
         var previousPosition: Long? = null
-        while (true) {
-            withFrameMillis { frameMs ->
-                val dt = if (lastMs < 0L) 0.016f else ((frameMs - lastMs) / 1000f).coerceIn(0f, 0.064f)
-                lastMs = frameMs
-                val position = positionProvider()
-                val jumped = snapOnSeek && previousPosition?.let { kotlin.math.abs(position - it) > 750L } == true
-                previousPosition = position
-                val overflow = (probe.textWidth - viewport.floatValue).coerceAtLeast(0f)
-                val target = when {
-                    overflow <= 0f -> 0f
-                    karaoke -> (probe.headX - viewport.floatValue * SweepKeepFraction).coerceIn(0f, overflow)
-                    else -> {
-                        val span = (lineEndMs - entry.time).coerceAtLeast(1L).toFloat()
-                        val through = (positionProvider() - entry.time) / span
-                        overflow * smoothstepF((through - 0.1f) / 0.75f)
-                    }
-                }
-                if (jumped) { value = target; velocity = 0f }
-                val omega = 1f / SlideFollowSec
-                val y = value - target
-                val e = kotlin.math.exp(-omega * dt)
-                val tmp = (velocity + omega * y) * dt
-                value = target + (y + tmp) * e
-                velocity = (velocity - omega * tmp) * e
-                if (kotlin.math.abs(value - target) < 0.05f && kotlin.math.abs(velocity) < 1f) {
-                    value = target
-                    velocity = 0f
-                }
-                if (value != scroll.floatValue) scroll.floatValue = value
-                morph?.cardLyricScroll = value
+        while (true) withFrameMillis { frameMs ->
+            val dt = if(lastMs<0L) .016f else ((frameMs-lastMs)/1000f).coerceIn(0f,.064f)
+            lastMs=frameMs
+            val position=positionProvider()
+            val jumped=snapOnSeek && previousPosition?.let { kotlin.math.abs(position-it)>750L }==true
+            previousPosition=position
+            val width=viewport.floatValue
+            val overflow=(probe.textWidth-width).coerceAtLeast(0f)
+            val plan=if(karaoke && probe.wordBounds.isNotEmpty()) {
+                tickerScrollPlan(probe.wordBounds,position,width,probe.textWidth)
+            } else {
+                val span=(lineEndMs-entry.time).coerceAtLeast(1L).toFloat()
+                val through=((position-entry.time)/span).coerceIn(0f,1f)
+                TickerScrollPlan(overflow*smoothstepF((through-.06f)/.66f),0f,overflow,.09f)
             }
+            val value=follower.advance(plan,dt,width,jumped)
+            if(value!=scroll.floatValue) scroll.floatValue=value
+            morph?.cardLyricScroll=value
         }
     }
 

@@ -109,7 +109,7 @@ internal fun rememberStyleCarousel(preview: Boolean): com.mochyy.mochymusic.ui.p
     if (preview) null else com.mochyy.mochymusic.ui.player.LocalSongCarousel.current
 
 /** a song's synced lines, and which song they're for */
-internal class StyleLyrics(val mediaId: String?, val lines: List<LyricsEntry>)
+internal class StyleLyrics(val mediaId: String?, val lines: List<LyricsEntry>, val loading: Boolean = false)
 
 /** what a style shows for one song in the row: its details, and its lyrics once it has played */
 internal class StyleSong(val track: StyleTrack, val lines: List<LyricsEntry>)
@@ -605,11 +605,15 @@ internal fun rememberStyleLyrics(readings: Boolean): StyleLyrics {
         else runCatching { LyricsUtils.parseLyricsCached(raw) }.getOrDefault(emptyList())
             .takeIf { it.isNotEmpty() && !LyricsUtils.isUnsynced(it) }.orEmpty()
     }
+    var loading = false
     if (readings && connection != null) {
         val metadata by connection.mediaMetadata.collectAsState()
         // The flagship's bottom card is what asks for a song's lyrics; a style has no card, so it
         // asks itself. Without this the words only came once the flagship had been shown.
         val loader: com.mochyy.mochymusic.viewmodels.LyricsScreenViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
+        val completed by loader.completedRequests.collectAsState()
+        val id = metadata?.id
+        loading = id != null && lyricsEntity?.id != id && id !in completed
         androidx.compose.runtime.LaunchedEffect(metadata?.id) {
             metadata?.let(loader::ensureLyricsLoaded)
         }
@@ -619,7 +623,7 @@ internal fun rememberStyleLyrics(readings: Boolean): StyleLyrics {
         }
     }
     val lines = remember(all) { all.filter { !it.isBackground && it.text.isNotBlank() } }
-    return remember(lyricsEntity?.id, lines) { StyleLyrics(lyricsEntity?.id, lines) }
+    return remember(lyricsEntity?.id, lines, loading) { StyleLyrics(lyricsEntity?.id, lines, loading) }
 }
 
 /**

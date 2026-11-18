@@ -326,4 +326,7 @@
     <string name="error_stream_unavailable_title">Lagu ini tidak dapat diputar</string>
     <string name="playback_error_channel_name">Kesalahan pemutaran</string>
     <string name="more_options">Opsi lainnya</string>
+    <string name="flow_lyrics_loading">Memuat lirik</string>
+    <string name="flow_lyrics_waiting">Menunggu vokal</string>
+    <string name="flow_lyrics_open">Buka lirik</string>
 </resources>

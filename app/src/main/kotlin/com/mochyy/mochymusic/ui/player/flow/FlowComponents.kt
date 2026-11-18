@@ -76,9 +76,13 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     val index by remember(lines,progress,offset){derivedStateOf{
         flowLyricIndex(lines,progress?.value?.position?:0L,offset?.value?.toLong()?:0L)
     }}
+    val status by remember(lines,index,progress,offset,lyrics.loading,preview) { derivedStateOf {
+        flowLyricStatus(lyrics.loading,lines,index,
+            (progress?.value?.position?:0L)+(offset?.value?.toLong()?:0L),preview)
+    }}
     val origin=remember{arrayOfNulls<Rect>(1)}
     val line=if(preview)"Your current lyric line appears here" else lines.getOrNull(index)?.text?:"Open lyrics"
-    val frame=FlowLyricFrame(info?.mediaId,index,line,lines.getOrNull(index))
+    val frame=FlowLyricFrame(info?.mediaId,index,line,lines.getOrNull(index).takeIf{status==FlowLyricStatus.LINE},status)
     val clock=remember(connection){PlaybackClock({connection?.player},{connection?.lyricsOffsetMs?.value?.toLong()?:0L})}
     val open={origin[0]?.let(onPageFrom);onOpen()}
     Row(modifier.fillMaxWidth().padding(horizontal=32.dp).heightIn(min=40.dp)
@@ -88,7 +92,9 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
         AnimatedContent(targetState=frame,modifier=Modifier.weight(1f).height(40.dp).clipToBounds(),contentAlignment=Alignment.CenterStart,
             transitionSpec={
                 if(!active||preview) fadeIn(tween(0)) togetherWith fadeOut(tween(0))
-                else {
+                else if(initialState.status!=FlowLyricStatus.LINE || targetState.status!=FlowLyricStatus.LINE) {
+                    (fadeIn(tween(160)) togetherWith fadeOut(tween(120))).using(null)
+                } else {
                     val direction=if(targetState.song==initialState.song&&targetState.index<initialState.index)-1 else 1
                     val sameSong=targetState.song==initialState.song
                     val incoming=fadeIn(tween(260,easing=FastOutSlowInEasing))+
@@ -104,6 +110,8 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
                     lineEndMs=LyricsUtils.lineEndMs(lines,shown.index),positionProvider=clock,
                     motionStyle=LyricsMotionStyle.PLAIN,waveEnabled=false,highBloom=false,morph=null,
                     fontSize=options.lyricSize.sp,ink=flowColor(options.activeColor),snapOnSeek=true)
+            } else if(shown.status!=FlowLyricStatus.LINE && shown.status!=FlowLyricStatus.PREVIEW) {
+                FlowLyricPlaceholder(shown.status,flowColor(options.activeColor),options.lyricSize.sp,active&&!preview)
             } else Text(shown.text,color=flowColor(options.activeColor),fontSize=options.lyricSize.sp,fontWeight=FontWeight.SemiBold,
                 maxLines=1,overflow=TextOverflow.Ellipsis)
         }
@@ -114,7 +122,7 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     }
 }
 
-private data class FlowLyricFrame(val song:String?,val index:Int,val text:String,val entry:LyricsEntry?)
+private data class FlowLyricFrame(val song:String?,val index:Int,val text:String,val entry:LyricsEntry?,val status:FlowLyricStatus)
 
 internal val FlowFooterActions=listOf(PlayerMenuAction.LYRICS,PlayerMenuAction.OUTPUT,PlayerMenuAction.QUEUE)
 
