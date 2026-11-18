@@ -229,7 +229,7 @@ fun PlayerHandle(
                                 if (dragging) {
                                     val speed = velocity.calculateVelocity().y
                                     sheet.release(speed, density,
-                                        collapse = shouldCloseHandle(travel / density, speed / density))
+                                        collapse = shouldCloseHandle((sheet.expandedBound - sheet.value).value, speed / density))
                                 } else sheet.collapseSoft()
                                 released = true
                                 break

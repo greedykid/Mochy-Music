@@ -67,6 +67,12 @@ jobs:
           ./gradlew :app:testUniversalGmsDebugUnitTest --tests "com.mochyy.mochymusic.ui.player.drizzy.DrizzyDesignTest" --tests "com.mochyy.mochymusic.ui.player.flow.FlowOptionsTest" --tests "com.mochyy.mochymusic.ui.player.flow.FlowLyricSyncTest" --tests "com.mochyy.mochymusic.ui.player.flow.FlowInteractionTest" assembleUniversalGmsDebug assembleUniversalGmsOptimized -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs="-Xmx5g -XX:+UseParallelGC -Dfile.encoding=UTF-8" --no-parallel --max-workers=2 --no-configuration-cache --console=plain --warning-mode summary
 
       - name: Build smaller ARM64 APK
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+          LIBREFM_API_KEY: ${{ secrets.LIBREFM_API_KEY }}
+          LIBREFM_SECRET: ${{ secrets.LIBREFM_SECRET }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
         run: ./gradlew assembleArm64GmsOptimized -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs="-Xmx5g -XX:+UseParallelGC -Dfile.encoding=UTF-8" --no-parallel --max-workers=2 --no-configuration-cache --console=plain --warning-mode summary
 
       - name: Upload optimized APKs and validation reports
