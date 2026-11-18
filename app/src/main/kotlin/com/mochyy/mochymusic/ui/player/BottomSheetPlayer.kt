@@ -1747,7 +1747,7 @@ private fun PlayerSheet(
 
             // the editor's tiles: inside the sheet, so they shrink and grow with it
             EditTiles(studioParts,onEditBar=if(isFlow) ({studio.openSheet(com.mochyy.mochymusic.ui.player.studio.StudioSheet.FLOW)}) else null)
-            if(isFlow && !studioEngaged && !lyricsMounted) {
+            if(isFlow && state.isExpanded && !studioEngaged && !lyricsMounted) {
                 androidx.compose.material3.Icon(painterResource(R.drawable.tune),"Customize Flagship Flow",tint=Color.White,
                     modifier=Modifier.align(Alignment.TopEnd).padding(top=statusBarTopInset+8.dp,end=12.dp).size(44.dp)
                         .clickable{studio.openSheet(com.mochyy.mochymusic.ui.player.studio.StudioSheet.FLOW)}.padding(11.dp))
