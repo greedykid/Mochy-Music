@@ -481,7 +481,7 @@ private fun UpcomingLine(text: String, alpha: Float, blur: Dp) {
 }
 
 @Composable
-private fun TickerLine(
+internal fun TickerLine(
     entry: LyricsEntry,
     dim: Boolean,
     lineEndMs: Long,
@@ -489,11 +489,14 @@ private fun TickerLine(
     motionStyle: LyricsMotionStyle,
     waveEnabled: Boolean,
     highBloom: Boolean,
-    morph: CardMorphState,
+    morph: CardMorphState?,
+    fontSize: androidx.compose.ui.unit.TextUnit = TickerFontSize,
+    ink: Color = Color.White,
+    snapOnSeek: Boolean = false,
 ) {
     // the romanisation as the line when that's set, with its own timed pieces, so the sweep runs over it the same way
     val line = rememberShownLyric(entry).entry
-    val parts = remember(line.text, line.words) { splitBackingVocal(line.text, line.words) }
+    val parts = remember(line.text, line.words, line.syllables) { splitBackingVocal(line.text, line.syllables ?: line.words) }
     val text = parts.lead.ifBlank { line.text }
     val words = parts.leadWords
     val karaoke = !dim && !words.isNullOrEmpty() && text.isNotEmpty()
@@ -504,14 +507,18 @@ private fun TickerLine(
 
     // The sideways slide: follows the sweep for a word-synced line, the clock for a line-synced
     // one. A critically damped follow, so a sweep that jumps (a seek) still glides.
-    LaunchedEffect(entry, karaoke) {
+    LaunchedEffect(entry, karaoke, lineEndMs, positionProvider, snapOnSeek) {
         var value = 0f
         var velocity = 0f
         var lastMs = -1L
+        var previousPosition: Long? = null
         while (true) {
             withFrameMillis { frameMs ->
                 val dt = if (lastMs < 0L) 0.016f else ((frameMs - lastMs) / 1000f).coerceIn(0f, 0.064f)
                 lastMs = frameMs
+                val position = positionProvider()
+                val jumped = snapOnSeek && previousPosition?.let { kotlin.math.abs(position - it) > 750L } == true
+                previousPosition = position
                 val overflow = (probe.textWidth - viewport.floatValue).coerceAtLeast(0f)
                 val target = when {
                     overflow <= 0f -> 0f
@@ -522,6 +529,7 @@ private fun TickerLine(
                         overflow * smoothstepF((through - 0.1f) / 0.75f)
                     }
                 }
+                if (jumped) { value = target; velocity = 0f }
                 val omega = 1f / SlideFollowSec
                 val y = value - target
                 val e = kotlin.math.exp(-omega * dt)
@@ -533,7 +541,7 @@ private fun TickerLine(
                     velocity = 0f
                 }
                 if (value != scroll.floatValue) scroll.floatValue = value
-                morph.cardLyricScroll = value
+                morph?.cardLyricScroll = value
             }
         }
     }
@@ -577,14 +585,14 @@ private fun TickerLine(
                     positionProvider = positionProvider,
                     waveAmplitudeProvider = { if (waveEnabled) 1f else 0f },
                     riseAmplitudeProvider = { 1f },
-                    baseColor = { Color.White.copy(alpha = UnsungAlpha) },
-                    highlightColor = Color.White,
-                    fontSize = TickerFontSize,
-                    lineHeight = TickerLineHeight,
+                    baseColor = { ink.copy(alpha = ink.alpha * UnsungAlpha) },
+                    highlightColor = ink,
+                    fontSize = fontSize,
+                    lineHeight = (fontSize.value + 5f).sp,
                     highBloom = highBloom,
                     motionStyle = motionStyle,
                     singleLine = true,
-                    motionScale = TickerMotionScale,
+                    motionScale = fontSize.value / 32f,
                     probe = probe,
                 )
             } else {
@@ -592,11 +600,11 @@ private fun TickerLine(
                     text = text,
                     // the same letter features as the sung line, so the words keep their width when the line goes dim
                     style = MaterialTheme.typography.headlineSmall.copy(
-                        fontSize = TickerFontSize,
-                        lineHeight = TickerLineHeight,
+                        fontSize = fontSize,
+                        lineHeight = (fontSize.value + 5f).sp,
                     ).withLetterMotionFeatures(motionStyle.risesWords),
                     fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = if (dim) 0.55f else 1f),
+                    color = ink.copy(alpha = ink.alpha * if (dim) 0.55f else 1f),
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Clip,

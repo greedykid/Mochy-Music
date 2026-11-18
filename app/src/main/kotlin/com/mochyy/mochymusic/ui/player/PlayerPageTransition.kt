@@ -154,6 +154,10 @@ internal class PlayerPageTransition(private val scope: CoroutineScope) {
     private fun animatableOf(target: PlayerPage) = if (target == PlayerPage.QUEUE) queue else lyrics
     private fun other(target: PlayerPage) = if (target == PlayerPage.QUEUE) PlayerPage.LYRICS else PlayerPage.QUEUE
 
+    fun toggle(target: PlayerPage) {
+        open(toggledPlayerPage(page, target))
+    }
+
     fun open(target: PlayerPage) {
         if (target == PlayerPage.NONE) {
             close()
@@ -582,3 +586,6 @@ internal fun androidx.compose.ui.graphics.GraphicsLayerScope.applyCardFlight(
     alpha *= smoothstepF((e - 0.06f) / 0.36f)
     return true
 }
+
+internal fun toggledPlayerPage(current: PlayerPage, requested: PlayerPage): PlayerPage =
+    if (current == requested) PlayerPage.NONE else requested

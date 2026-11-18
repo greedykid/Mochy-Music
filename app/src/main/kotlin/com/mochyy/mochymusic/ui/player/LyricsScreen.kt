@@ -206,6 +206,9 @@ private fun androidx.compose.ui.unit.Dp.toPx(density: androidx.compose.ui.unit.D
     with(density) { this@toPx.toPx() }
 private const val BottomFadeStart = 0.62f
 
+// Reopening a page should reuse its cover colour instead of repeating bitmap/palette work.
+private val lyricsAccentCache = android.util.LruCache<String, Color>(24)
+
 
 @Composable
 fun LyricsScreen(
@@ -214,6 +217,7 @@ fun LyricsScreen(
     screenHeight: androidx.compose.ui.unit.Dp,
 
     contentBottomInset: androidx.compose.ui.unit.Dp,
+    persistentBottomInset: androidx.compose.ui.unit.Dp = 0.dp,
 
     onImmersiveChange: (Boolean) -> Unit = {},
 
@@ -258,11 +262,13 @@ fun LyricsScreen(
 
     val context = LocalContext.current
     val fallbackColorInt = MaterialTheme.colorScheme.primary.toArgb()
-    var accentColor by remember { mutableStateOf<Color?>(null) }
+    var accentColor by remember(mediaMetadata?.thumbnailUrl) {
+        mutableStateOf(mediaMetadata?.thumbnailUrl?.let(lyricsAccentCache::get))
+    }
     LaunchedEffect(mediaMetadata?.thumbnailUrl) {
         val thumbnailUrl = mediaMetadata?.thumbnailUrl
-        accentColor = null
         if (thumbnailUrl == null) return@LaunchedEffect
+        lyricsAccentCache.get(thumbnailUrl)?.let { accentColor = it; return@LaunchedEffect }
         withContext(Dispatchers.IO) {
             try {
                 val request = ImageRequest.Builder(context)
@@ -283,6 +289,7 @@ fun LyricsScreen(
                         fallbackColor = fallbackColorInt,
                     )
                     accentColor = colors.firstOrNull()?.let { PlayerColorExtractor.darkenIfTooLight(it) }
+                    accentColor?.let { lyricsAccentCache.put(thumbnailUrl, it) }
                 }
             } catch (_: Exception) {
             }
@@ -584,7 +591,7 @@ fun LyricsScreen(
                 // its bottom, so lines scrolled behind the bar and the timestamps.
                 // Read in layout, so the immersive toggle doesn't recompose the whole page.
                 .layout { measurable, constraints ->
-                    val inset = (contentBottomInset * (1f - immersion)).coerceAtLeast(0.dp).roundToPx()
+                    val inset = (contentBottomInset * (1f - immersion)).coerceAtLeast(persistentBottomInset).roundToPx()
                     val inner = constraints.offset(vertical = -inset)
                     listPadding.heightPx = inner.maxHeight
                     listPadding.density = this.density

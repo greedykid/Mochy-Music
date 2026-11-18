@@ -113,6 +113,7 @@ fun QueueScreen(
     onClose: () -> Unit,
     /** Distance from the bottom of the screen to the top of the seek bar: the list fades out there. */
     contentBottomInset: Dp,
+    persistentBottomInset: androidx.compose.ui.unit.Dp = 0.dp,
     /**
      * How far the player's button column reaches up from there. Rows scroll under it, as lyrics
      * do, but the list keeps this much room at its end so the last songs can still be brought out
@@ -300,7 +301,7 @@ fun QueueScreen(
                 // With the controls hidden it runs on to the bottom of the screen. Read while
                 // measuring, so the 420ms slide doesn't recompose the page every frame.
                 .layout { measurable, constraints ->
-                    val inset = (contentBottomInset * (1f - immersion)).roundToPx().coerceAtLeast(0)
+                    val inset = (contentBottomInset * (1f - immersion)).coerceAtLeast(persistentBottomInset).roundToPx().coerceAtLeast(0)
                     val placeable = measurable.measure(
                         constraints.copy(
                             minHeight = (constraints.minHeight - inset).coerceAtLeast(0),

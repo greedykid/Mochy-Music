@@ -46,3 +46,12 @@ Flow's compact-screen scroll container now sits inside its visibility layer and 
 The single-line ticker reads the same progress state and per-song offset as the full lyrics page, including seek/pause and offset changes. Untimed lyrics keep the full-lyrics shortcut. Manual lyric scrolling suspends follow until the Follow lyrics button or a timed line is tapped; a line tap compensates for the song offset when seeking. Queue drag handles and list state are preserved.
 
 CI adds six timing regression cases; actual touch behavior still needs device verification. The Looks v1.1 selector remains compatible without reimporting.
+
+## Word sync, transitions and optimized update builds
+
+- Lyrics/queue footer buttons toggle their own page and switch directly to the other page. The Flow footer stays reachable during immersive list scrolling, with permanent list clearance.
+- Flow's lyric strip reuses the native karaoke renderer: actual word/syllable timestamps drive the sweep; long lines follow the sung text horizontally with soft edges. Untimed words retain line timing. Font size and foreground colour remain configurable. Per-frame work is in drawing/layers, and the renderer is removed while the strip is hidden.
+- Flow pages fade/slide as one surface rather than clipping into a Flagship pill. Per-row card morphs are skipped; cover accent extraction is cached across reopening. The native Flagship style keeps its existing transition.
+- Flow's top handle owns its drag, follows the finger via the sheet's hold/release API, and returns or closes using density-independent distance/velocity thresholds. Cancellation returns it open.
+- `optimized` inherits release R8/resource shrinking and disables debugging/source information while keeping `.debug` and the persistent fork signing key. It is an update to previous fork APKs. CI builds universal and ARM64 variants, retains mappings and test XML, plus a debug fallback. ARM64 is only for compatible 64-bit ARM devices.
+- Device checks still needed: repeated toggles, switching mid-animation, finger tracking/reversal/cancel, word timing/seek/pause, long lines and RTL, scrolling both lists, playback/output/modules/preferences after updating. No device frame-time measurements have been collected here.

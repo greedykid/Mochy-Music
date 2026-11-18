@@ -39,6 +39,10 @@ import androidx.compose.ui.unit.sp
 import com.mochyy.mochymusic.LocalPlayerConnection
 import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.lyrics.LyricsUtils
+import com.mochyy.mochymusic.lyrics.LyricsEntry
+import com.mochyy.mochymusic.ui.player.PlaybackClock
+import com.mochyy.mochymusic.ui.player.TickerLine
+import com.mochyy.mochymusic.constants.LyricsMotionStyle
 import com.mochyy.mochymusic.ui.player.rememberMusicVolume
 import com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction
 import com.mochyy.mochymusic.ui.player.styles.rememberStyleLyrics
@@ -74,13 +78,14 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     }}
     val origin=remember{arrayOfNulls<Rect>(1)}
     val line=if(preview)"Your current lyric line appears here" else lines.getOrNull(index)?.text?:"Open lyrics"
-    val frame=FlowLyricFrame(info?.mediaId,index,line)
+    val frame=FlowLyricFrame(info?.mediaId,index,line,lines.getOrNull(index))
+    val clock=remember(connection){PlaybackClock({connection?.player},{connection?.lyricsOffsetMs?.value?.toLong()?:0L})}
     val open={origin[0]?.let(onPageFrom);onOpen()}
     Row(modifier.fillMaxWidth().padding(horizontal=32.dp).heightIn(min=40.dp)
         .onGloballyPositioned{if(!preview)origin[0]=it.boundsInRoot()}
         .clickable(enabled=active&&!preview,interactionSource=remember{MutableInteractionSource()},indication=null,onClick=open),
         verticalAlignment=Alignment.CenterVertically) {
-        AnimatedContent(targetState=frame,modifier=Modifier.weight(1f).clipToBounds(),contentAlignment=Alignment.CenterStart,
+        AnimatedContent(targetState=frame,modifier=Modifier.weight(1f).height(40.dp).clipToBounds(),contentAlignment=Alignment.CenterStart,
             transitionSpec={
                 if(!active||preview) fadeIn(tween(0)) togetherWith fadeOut(tween(0))
                 else {
@@ -90,10 +95,16 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
                         slideInVertically(tween(280,easing=FastOutSlowInEasing)){if(sameSong)it*direction/3 else 0}
                     val outgoing=fadeOut(tween(140))+
                         slideOutVertically(tween(220,easing=FastOutSlowInEasing)){if(sameSong)-it*direction/3 else 0}
-                    (incoming togetherWith outgoing).using(SizeTransform(clip=true,sizeAnimationSpec={_,_->tween(240)}))
+                    (incoming togetherWith outgoing).using(null)
                 }
             },label="Flow lyric line") { shown ->
-            Text(shown.text,color=flowColor(options.activeColor),fontSize=options.lyricSize.sp,fontWeight=FontWeight.SemiBold,
+            val entry=shown.entry
+            if(active && !preview && entry!=null) {
+                TickerLine(entry=entry,dim=false,
+                    lineEndMs=LyricsUtils.lineEndMs(lines,shown.index),positionProvider=clock,
+                    motionStyle=LyricsMotionStyle.PLAIN,waveEnabled=false,highBloom=false,morph=null,
+                    fontSize=options.lyricSize.sp,ink=flowColor(options.activeColor),snapOnSeek=true)
+            } else Text(shown.text,color=flowColor(options.activeColor),fontSize=options.lyricSize.sp,fontWeight=FontWeight.SemiBold,
                 maxLines=1,overflow=TextOverflow.Ellipsis)
         }
         Box(Modifier.size(40.dp).clickable(enabled=active&&!preview,interactionSource=remember{MutableInteractionSource()},indication=CircularHighlight,onClick=open),
@@ -103,8 +114,7 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     }
 }
 
-@Immutable
-private data class FlowLyricFrame(val song:String?,val index:Int,val text:String)
+private data class FlowLyricFrame(val song:String?,val index:Int,val text:String,val entry:LyricsEntry?)
 
 internal val FlowFooterActions=listOf(PlayerMenuAction.LYRICS,PlayerMenuAction.OUTPUT,PlayerMenuAction.QUEUE)
 
@@ -113,6 +123,7 @@ internal val FlowFooterActions=listOf(PlayerMenuAction.LYRICS,PlayerMenuAction.O
 internal fun FlowBottomBar(
     options:FlowOptions,onAction:(PlayerMenuAction)->Unit,modifier:Modifier=Modifier,
     active:Boolean=true,preview:Boolean=false,onPageFrom:(Rect)->Unit={},
+    isSelected:(PlayerMenuAction)->Boolean={false},
 ) {
     val volume=rememberMusicVolume(listening=active&&!preview)
     val audio=rememberSkinAudio(needed=options.showDevice,preview=preview)
@@ -132,11 +143,12 @@ internal fun FlowBottomBar(
             Spacer(Modifier.height(options.footerGap.dp))
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceAround,verticalAlignment=Alignment.CenterVertically) {
                 FlowFooterActions.forEachIndexed { i,action ->
-                    val label=when(i){0->"Open lyrics";1->"Change playback device";else->"Open queue"}
+                    val selected=isSelected(action)
+                    val label=when(i){0->if(selected) "Close lyrics" else "Open lyrics";1->"Change playback device";else->if(selected) "Close queue" else "Open queue"}
                     Box(Modifier.size(48.dp).onGloballyPositioned{if(!preview)rects[i]=it.boundsInRoot()}
                         .clickable(enabled=active&&!preview,interactionSource=remember(action){MutableInteractionSource()},indication=CircularHighlight){rects[i]?.let(onPageFrom);onAction(action)},contentAlignment=Alignment.Center) {
-                        if(i==1)Icon(Icons.Rounded.Cast,label,tint=ink.copy(alpha=.85f),modifier=Modifier.size(28.dp))
-                        else Icon(painterResource(if(i==0)R.drawable.lyrics else R.drawable.apple_queue),label,tint=ink.copy(alpha=.85f),modifier=Modifier.size(28.dp))
+                        if(i==1)Icon(Icons.Rounded.Cast,label,tint=ink.copy(alpha=if(selected) 1f else .85f),modifier=Modifier.size(28.dp))
+                        else Icon(painterResource(if(i==0)R.drawable.lyrics else R.drawable.apple_queue),label,tint=ink.copy(alpha=if(selected) 1f else .85f),modifier=Modifier.size(28.dp))
                     }
                 }
             }

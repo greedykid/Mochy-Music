@@ -42,6 +42,9 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -155,6 +158,7 @@ fun PlayerHandle(
     /** False while something else owns the top of the player (the studio). */
     enabled: () -> Boolean,
     modifier: Modifier = Modifier,
+    followFinger: Boolean = false,
 ) {
     val currentEnabled by rememberUpdatedState(enabled)
     val bend = remember { Animatable(0f) }
@@ -190,9 +194,9 @@ fun PlayerHandle(
                 targetBounds[2] = bounds.right
                 targetBounds[3] = bounds.bottom
             }
-            .pointerInput(sheet) {
+            .pointerInput(sheet, followFinger) {
                 awaitEachGesture {
-                    awaitFirstDown()
+                    val down = awaitFirstDown()
                     // Only on the open player: collapsed, this spot is inside the mini player,
                     // whose tap opens it. The down isn't consumed, so a drag from here still
                     // reaches the sheet and closes it.
@@ -204,11 +208,45 @@ fun PlayerHandle(
                         return@awaitEachGesture
                     }
                     pressed = true
-                    val up = waitForUpOrCancellation()
-                    pressed = false
-                    if (up != null) {
-                        up.consume()
-                        sheet.collapseSoft()
+                    if (!followFinger) {
+                        val up = waitForUpOrCancellation()
+                        pressed = false
+                        if (up != null) { up.consume(); sheet.collapseSoft() }
+                        return@awaitEachGesture
+                    }
+                    down.consume()
+                    val velocity = VelocityTracker()
+                    velocity.addPosition(down.uptimeMillis, Offset.Zero)
+                    var travel = 0f
+                    var dragging = false
+                    var released = false
+                    try {
+                        while (true) {
+                            val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                            if (change.isConsumed) break
+                            if (!change.pressed) {
+                                change.consume()
+                                if (dragging) {
+                                    val speed = velocity.calculateVelocity().y
+                                    sheet.release(speed, density,
+                                        collapse = shouldCloseHandle(travel / density, speed / density))
+                                } else sheet.collapseSoft()
+                                released = true
+                                break
+                            }
+                            val dy = change.positionChange().y
+                            travel += dy
+                            velocity.addPosition(change.uptimeMillis, Offset(0f, travel))
+                            if (!dragging && kotlin.math.abs(travel) > viewConfiguration.touchSlop) {
+                                dragging = true
+                                sheet.hold()
+                                sheet.dragHeld(travel, density)
+                            } else if (dragging) sheet.dragHeld(dy, density)
+                            change.consume()
+                        }
+                    } finally {
+                        pressed = false
+                        if (dragging && !released) sheet.release(0f, density, collapse = false)
                     }
                 }
             }
@@ -314,4 +352,11 @@ internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+/** dp and dp/s keep the drag threshold consistent across screen densities. */
+internal fun shouldCloseHandle(travelDp: Float, velocityDp: Float): Boolean = when {
+    velocityDp > 650f -> true
+    velocityDp < -650f -> false
+    else -> travelDp > 72f
 }

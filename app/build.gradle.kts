@@ -188,6 +188,17 @@ extensions.configure<ApplicationExtension> {
             signingConfig = signingConfigs.getByName("debug")
         }
 
+        // Release optimization with the existing fork's package and persistent signing key,
+        // so users can update their debug install without losing its library/preferences.
+        create("optimized") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".debug"
+            isDebuggable = false
+            isProfileable = false
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
+
         // Release-identical performance with the profiler still attachable.
         //
         // `isDebuggable = false` is what makes release fast (ART will not JIT-deopt, R8 output
@@ -324,7 +335,8 @@ composeCompiler {
     val buildingReleaseLike = gradle.startParameter.taskNames.any { name ->
         name.contains("Release", ignoreCase = true) ||
             name.contains("Profileable", ignoreCase = true) ||
-            name.contains("Fast", ignoreCase = true)
+            name.contains("Fast", ignoreCase = true) ||
+            name.contains("Optimized", ignoreCase = true)
     }
     includeSourceInformation.set(!buildingReleaseLike)
 

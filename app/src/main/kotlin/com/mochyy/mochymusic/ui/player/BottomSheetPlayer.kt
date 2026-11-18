@@ -891,6 +891,8 @@ private fun PlayerSheet(
             com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.REPEAT -> transportState.repeatMode != Player.REPEAT_MODE_OFF
             com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.SHUFFLE -> transportState.shuffleModeEnabled
             com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.ROTATE -> styleTurned
+            com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.LYRICS -> showLyrics
+            com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.QUEUE -> showQueue
             else -> menuExtras.isActive(action)
         }
         val onMenuAction: (com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction) -> Unit = { action ->
@@ -907,8 +909,8 @@ private fun PlayerSheet(
                 com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.REPEAT -> playerConnection.player.toggleRepeatMode()
                 com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.SHUFFLE ->
                     playerConnection.player.shuffleModeEnabled = !playerConnection.player.shuffleModeEnabled
-                com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.LYRICS -> transition.open(PlayerPage.LYRICS)
-                com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.QUEUE -> transition.open(PlayerPage.QUEUE)
+                com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.LYRICS -> if(isFlow) transition.toggle(PlayerPage.LYRICS) else transition.open(PlayerPage.LYRICS)
+                com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.QUEUE -> if(isFlow) transition.toggle(PlayerPage.QUEUE) else transition.open(PlayerPage.QUEUE)
                 com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.SPEED -> showPlaybackSpeed = true
                 com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.EQUALIZER -> openEqualizer()
                 com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.OUTPUT -> showDeviceOutput = true
@@ -1233,7 +1235,8 @@ private fun PlayerSheet(
 
             // The card growing into the page, under it: its glass widens to the full screen while
             // the player behind dims a touch. Only there while a page is growing or shrinking.
-            if (pillMorph) FlagshipPillMorphSurface(transition = transition, morph = morph)
+            if (isFlow) { /* Flow has no source pill or card to draw during a page transition. */ }
+            else if (pillMorph) FlagshipPillMorphSurface(transition = transition, morph = morph)
             else ExpandingCardSurface(transition = transition, morph = morph, look = cardLook)
 
             // Unmounted while the player is collapsed - even though the page itself is remembered -
@@ -1247,15 +1250,16 @@ private fun PlayerSheet(
                     screenHeight = screenHeight,
 
                     contentBottomInset = lyricsBottomInset,
+                    persistentBottomInset = if(isFlow) flowBottomFootprint(flowOptions) else 0.dp,
                     onImmersiveChange = { lyricsImmersive = it },
                     isSheetDragging = isSheetInTransition,
                     isMorphing = lyricsMorphing,
-                    enterProgressProvider = { transition.cardMorphProgress(PlayerPage.LYRICS) },
-                    morph = morph,
+                    enterProgressProvider = { if(isFlow) 1f else transition.cardMorphProgress(PlayerPage.LYRICS) },
+                    morph = if(isFlow) null else morph,
                     onSwitchSource = { showLyricsSource = true },
                     modifier = Modifier
                         .fillMaxSize()
-                        .pageTransitionLayer(PlayerPage.LYRICS, transition, morph, pageLook) { lyricsPageProgress },
+                        .then(if(isFlow) Modifier.flowPageTransition { lyricsPageProgress } else Modifier.pageTransitionLayer(PlayerPage.LYRICS, transition, morph, pageLook) { lyricsPageProgress }),
                 )
             }
 
@@ -1265,14 +1269,15 @@ private fun PlayerSheet(
                     // Fades into the seek bar like the lyrics; rows run under the chevron/shuffle/
                     // autoplay column, which reaches this far above the bar.
                     contentBottomInset = lyricsBottomInset,
+                    persistentBottomInset = if(isFlow) flowBottomFootprint(flowOptions) else 0.dp,
                     controlsClearance = QueueButtonColumnHeight + 12.dp - SeekBarLift,
                     likeBurst = likeBurst,
                     onImmersiveChange = { queueImmersive = it },
-                    enterProgressProvider = { transition.cardMorphProgress(PlayerPage.QUEUE) },
-                    morph = morph,
+                    enterProgressProvider = { if(isFlow) 1f else transition.cardMorphProgress(PlayerPage.QUEUE) },
+                    morph = if(isFlow) null else morph,
                     modifier = Modifier
                         .fillMaxSize()
-                        .pageTransitionLayer(PlayerPage.QUEUE, transition, morph, pageLook) { queuePageProgress },
+                        .then(if(isFlow) Modifier.flowPageTransition { queuePageProgress } else Modifier.pageTransitionLayer(PlayerPage.QUEUE, transition, morph, pageLook) { queuePageProgress }),
                 )
             }
 
@@ -1329,7 +1334,7 @@ private fun PlayerSheet(
                 )
             }
 
-            if ((showVolumeBar || barLifted) && deckMounted) {
+            if ((showVolumeBar || barLifted) && (deckMounted || isFlow)) {
                 val volumeBarModifier = Modifier
                     .align(Alignment.BottomCenter)
                     .widthIn(max = 600.dp)
@@ -1342,13 +1347,13 @@ private fun PlayerSheet(
                     .studioBarLayer(studioParts) { it.volumeBar }
                     .studioPiece(studioPieces, StudioPieces.VOLUME_BAR)
                     .graphicsLayer {
-                        alpha = 1f - controlsHidden
-                        translationY = controlsHidden * size.height * 0.75f
+                        alpha = if(isFlow) 1f else 1f - controlsHidden
+                        translationY = if(isFlow) 0f else controlsHidden * size.height * 0.75f
                         letTouchesThroughWhenHidden()
                     }
                 if(isFlow) {
                     FlowBottomBar(options=flowOptions,active=sheetShowing && !studioEngaged,onAction=onMenuAction,
-                        onPageFrom={morph.cardRect=it},modifier=volumeBarModifier)
+                        onPageFrom={morph.cardRect=it},isSelected=::menuActionActive,modifier=volumeBarModifier)
                 } else if (newBottomBar) {
                     FlagshipBottomBar(
                         progressProvider = progressProvider,
@@ -1765,6 +1770,7 @@ private fun PlayerSheet(
                 sheet = state,
                 statusBarTop = statusBarTopInset,
                 enabled = { !studio.engaged },
+                followFinger = isFlow,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }
