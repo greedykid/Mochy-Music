@@ -22,6 +22,7 @@ data class DrizzyPart(
     val align: String = "start",
     val bold: Boolean = false,
     val lines: Int = 2,
+    val lineGap: Float = 10f,
     val thumb: Boolean = false,
     val times: Boolean = true,
     val label: Boolean = false,
@@ -35,6 +36,8 @@ data class DrizzyLayout(
     val order: List<String> = DrizzyDesign.sections,
     val transport: List<String> = listOf("back10", "previous", "play", "next", "forward10"),
     val footer: List<String> = listOf("lyricsButton", "deviceButton", "queueButton"),
+    val songText: List<String> = listOf("title", "artist"),
+    val songButtons: List<String> = listOf("love", "menu"),
     val parts: Map<String, DrizzyPart> = emptyMap(),
     val padding: Float = 22f,
     val background: String = "#484848",
@@ -105,6 +108,8 @@ data class DrizzyDesign(
                 order = ordered(layout.order, sections),
                 transport = ordered(layout.transport, listOf("back10", "previous", "play", "next", "forward10")),
                 footer = ordered(layout.footer, listOf("lyricsButton", "deviceButton", "queueButton")),
+                songText = ordered(layout.songText, listOf("title", "artist")),
+                songButtons = ordered(layout.songButtons, listOf("love", "menu")),
                 padding = number(layout.padding, 0f..48f, 22f), fade = number(layout.fade, 0f..300f, 120f),
                 blur = number(layout.blur, 0f..40f, 0f), dim = number(layout.dim, 0f..0.9f, 0.25f), background = color(layout.background, "#484848"),
                 parts = layout.parts.filterKeys { it in names }.mapValues { (id, p) ->
@@ -112,6 +117,7 @@ data class DrizzyDesign(
                     p.copy(width = number(p.width, 0.2f..1f, 1f), x = number(p.x, -120f..120f, 0f), y = number(p.y, -120f..120f, 0f),
                         gap = number(p.gap, 0f..64f, d.gap), size = number(p.size, 2f..96f, d.size), height = number(p.height, 0f..600f, d.height),
                         radius = number(p.radius, 0f..100f, 0f), opacity = number(p.opacity, 0f..1f, 1f), lines = p.lines.coerceIn(1,4),
+                        lineGap = number(p.lineGap, 0f..40f, 10f),
                         color = color(p.color,d.color), secondary = color(p.secondary,d.secondary), fill = color(p.fill,d.fill),
                         align = p.align.takeIf { it in listOf("start","center","end") } ?: "start",
                         fit = p.fit.takeIf { it in listOf("crop","fit") } ?: "crop", action = p.action.takeIf { it in actions } ?: d.action)

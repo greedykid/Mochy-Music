@@ -142,17 +142,21 @@ internal fun DrizzyPlayerStyle(
                                     "metadata" -> DrizzyText(audio?.fill("{codec} · {khz} kHz · {kbps} kbps").orEmpty(),part)
                                     "song" -> Row(verticalAlignment=Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {
-                                            for((name,value)in listOf("title" to track.title,"artist" to track.artist)) {
+                                            for((name,value)in layout.songText.map{it to if(it=="title")track.title else track.artist}) {
                                                 val p=layout.part(name)
-                                                if(p.visible)DrizzyText(value,p,Modifier.padding(top=p.gap.dp).offset(p.x.dp,p.y.dp).alpha(p.opacity)
+                                                if(p.visible)DrizzyText(value,p,Modifier.fillMaxWidth(p.width).padding(top=p.gap.dp).offset(p.x.dp,p.y.dp).alpha(p.opacity)
                                                     .then(if(onSelect!=null)Modifier.clickable{onSelect(name)}else Modifier))
                                             }
                                         }
-                                        listOf("love","menu").forEach { name -> DrizzyButton(name,layout.part(name),transport?.isPlaying==true,info?.liked==true,preview,onSelect,perform) }
+                                        layout.songButtons.forEach { name -> DrizzyButton(name,layout.part(name),transport?.isPlaying==true,info?.liked==true,preview,onSelect,perform) }
                                     }
                                     "progress" -> Column {
-                                        DrizzyBar(part,{(position.positionMs().toFloat()/duration).coerceIn(0f,1f)},"Song position",!preview&&onSelect==null&&duration>1,
-                                            onChange={connection?.seekTo((it*duration).toLong().coerceIn(0,duration))})
+                                        var seekFraction by remember { mutableStateOf<Float?>(null) }
+                                        DrizzyBar(part,{seekFraction ?: (position.positionMs().toFloat()/duration).coerceIn(0f,1f)},"Song position",!preview&&onSelect==null&&duration>1,
+                                            onChange={seekFraction=it},onFinish={
+                                                seekFraction?.let{connection?.seekTo((it*duration).toLong().coerceIn(0,duration))}
+                                                seekFraction=null
+                                            })
                                         if(part.times)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                                             Text(makeTimeString(seconds*1000),color=drizzyColor(part.secondary),fontSize=11.sp)
                                             Text("−"+makeTimeString((duration-seconds*1000).coerceAtLeast(0)),color=drizzyColor(part.secondary),fontSize=11.sp)
@@ -275,14 +279,17 @@ private fun DrizzyLyrics(lines:List<LyricsEntry>,part:DrizzyPart,position:LivePo
     LaunchedEffect(current,lines){if(lines.isNotEmpty())state.animateScrollToItem((current-1).coerceIn(0,lines.lastIndex))}
     if(lines.isEmpty())Text("No synced lyrics available. Open full lyrics to choose a source.",color=drizzyColor(part.secondary),fontSize=14.sp,
         modifier=Modifier.heightIn(min=part.height.coerceAtLeast(60f).dp))
-    else androidx.compose.foundation.lazy.LazyColumn(state=state,userScrollEnabled=false,verticalArrangement=Arrangement.spacedBy(10.dp),
+    else androidx.compose.foundation.lazy.LazyColumn(state=state,userScrollEnabled=false,verticalArrangement=Arrangement.spacedBy(part.lineGap.dp),
         modifier=Modifier.fillMaxWidth().height(part.height.coerceAtLeast(60f).dp)){
         items(lines.size,key={it}){i->
             val active=i==current
-            Text(lines[i].text,color=drizzyColor(if(active)part.color else part.secondary),fontSize=part.size.coerceIn(8f,96f).sp,
-                fontWeight=if(active&&part.bold)FontWeight.Bold else FontWeight.Normal,maxLines=part.lines,overflow=TextOverflow.Ellipsis,
-                textAlign=when(part.align){"center"->TextAlign.Center;"end"->TextAlign.End;else->TextAlign.Start},
-                modifier=Modifier.fillMaxWidth().clickable(enabled=!preview&&clickable&&duration>1){onSeek(lines[i].time)}.padding(vertical=4.dp))
+            Row(Modifier.fillMaxWidth().clickable(enabled=!preview&&clickable&&duration>1){onSeek(lines[i].time)}.padding(vertical=4.dp),
+                verticalAlignment=Alignment.CenterVertically) {
+                Text(lines[i].text,color=drizzyColor(if(active)part.color else part.secondary),fontSize=part.size.coerceIn(8f,96f).sp,
+                    fontWeight=if(active&&part.bold)FontWeight.Bold else FontWeight.Normal,maxLines=part.lines,overflow=TextOverflow.Ellipsis,
+                    textAlign=when(part.align){"center"->TextAlign.Center;"end"->TextAlign.End;else->TextAlign.Start},modifier=Modifier.weight(1f))
+                if(active&&part.times)Text(makeTimeString(lines[i].time),color=drizzyColor(part.color).copy(alpha=.6f),fontSize=10.sp,modifier=Modifier.padding(start=8.dp))
+            }
         }
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,6 +49,7 @@ internal fun DrizzyEditor(actions: StyleActions, onDismiss: () -> Unit) {
     var presets by remember(presetsRaw) { mutableStateOf(runCatching { Json.decodeFromString<Map<String,String>>(presetsRaw) }.getOrDefault(emptyMap())) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val commit: (DrizzyDesign) -> Unit = { value ->
         val clean=DrizzyDesign.decode(DrizzyDesign.encode(value))
         history.commit(clean);design=history.current;raw=DrizzyDesign.encode(design)
@@ -57,11 +59,11 @@ internal fun DrizzyEditor(actions: StyleActions, onDismiss: () -> Unit) {
     fun layout(value: DrizzyLayout) = commit(design.change(wide,value))
     fun update(value: DrizzyPart) = layout(current.change(selected,value))
     fun move(direction:Int) {
-        val order=when(selected){in current.order->current.order;in current.transport->current.transport;in current.footer->current.footer;else->emptyList()}.toMutableList()
+        val order=when(selected){in current.order->current.order;in current.transport->current.transport;in current.footer->current.footer;in current.songText->current.songText;in current.songButtons->current.songButtons;else->emptyList()}.toMutableList()
         val index=order.indexOf(selected);val to=index+direction
         if(index>=0&&to in order.indices) {
             order[index]=order[to];order[to]=selected
-            layout(when(selected){in current.order->current.copy(order=order);in current.transport->current.copy(transport=order);else->current.copy(footer=order)})
+            layout(when(selected){in current.order->current.copy(order=order);in current.transport->current.copy(transport=order);in current.songText->current.copy(songText=order);in current.songButtons->current.copy(songButtons=order);else->current.copy(footer=order)})
         }
     }
     val exporter=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")){uri->
@@ -96,7 +98,7 @@ internal fun DrizzyEditor(actions: StyleActions, onDismiss: () -> Unit) {
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick={largePreview=!largePreview}){Text(if(largePreview)"Inspector" else "Layout view")}
                 }
-                BoxWithConstraints(Modifier.fillMaxWidth().height(if(largePreview)480.dp else 215.dp).clipToBounds().background(Color.Black),contentAlignment=Alignment.Center) {
+                BoxWithConstraints(Modifier.fillMaxWidth().height(if(largePreview)screenHeight*.65f else (screenHeight*.26f).coerceIn(96.dp,215.dp)).clipToBounds().background(Color.Black),contentAlignment=Alignment.Center) {
                     val w=if(wide)780.dp else 390.dp
                     val h=if(wide)390.dp else 844.dp
                     val scale=minOf(maxWidth/w,maxHeight/h)
@@ -128,7 +130,7 @@ internal fun DrizzyEditor(actions: StyleActions, onDismiss: () -> Unit) {
                         NumberField("Horizontal offset",part.x,-120f..120f){update(part.copy(x=it))}
                         NumberField("Vertical offset",part.y,-120f..120f){update(part.copy(y=it))}
                         NumberField("Opacity",part.opacity,0f..1f){update(part.copy(opacity=it))}
-                        if(selected in DrizzyDesign.sections) {
+                        if(selected in DrizzyDesign.sections || selected in listOf("title","artist")) {
                             NumberField("Width",part.width,0.2f..1f){update(part.copy(width=it))}
                             NumberField("Space above",part.gap,0f..64f){update(part.copy(gap=it))}
                         }
@@ -149,6 +151,10 @@ internal fun DrizzyEditor(actions: StyleActions, onDismiss: () -> Unit) {
                             Choice("Text alignment",part.align,listOf("start","center","end")){update(part.copy(align=it))}
                         }
                         if(selected in DrizzyDesign.sections)Choice("Component alignment",part.align,listOf("start","center","end")){update(part.copy(align=it))}
+                        if(selected=="lyrics") {
+                            NumberField("Space between lyric lines",part.lineGap,0f..40f){update(part.copy(lineGap=it))}
+                            Toggle("Show active line timestamp",part.times){update(part.copy(times=it))}
+                        }
                         if(selected in listOf("progress","volume","lyrics"))ColorField(if(selected=="lyrics")"Inactive lyrics"else "Unfilled track",part.secondary){update(part.copy(secondary=it))}
                         if(selected in listOf("progress","volume")) {
                             Toggle("Show circular handle",part.thumb){update(part.copy(thumb=it))}
