@@ -1408,6 +1408,7 @@ private fun PlayerSheet(
                     cardGrowable = showDeck && !isTurntable,
                 )
             }
+            val flowControlsScroll = rememberScrollState()
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -1431,7 +1432,7 @@ private fun PlayerSheet(
 
                     // The visibility layer must wrap the scroll node too. Otherwise the invisible
                     // scroll container still wins hit testing over the lyrics/queue beneath it.
-                    .then(if(isFlow) Modifier.verticalScroll(rememberScrollState(), enabled = !lyricsMounted && transition.preparing == PlayerPage.NONE && !studioEngaged) else Modifier)
+                    .then(if(isFlow && !lyricsMounted && transition.preparing == PlayerPage.NONE) Modifier.verticalScroll(flowControlsScroll, enabled = !studioEngaged) else Modifier)
                     .onGloballyPositioned { coords ->
                         if (coords.parentLayoutCoordinates == null) return@onGloballyPositioned
 

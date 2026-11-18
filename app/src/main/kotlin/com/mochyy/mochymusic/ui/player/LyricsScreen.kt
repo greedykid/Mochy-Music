@@ -568,12 +568,7 @@ fun LyricsScreen(
                     .clickable { if (immersive) immersive = false else onClose() }
             )
 
-            Spacer(modifier = Modifier.weight(1f))
-            if (!unsynced && !followPlayback && lines.isNotEmpty()) {
-                TextButton(onClick = { followPlayback = true }) {
-                    Text(stringResource(R.string.follow_lyrics), color = Color.White)
-                }
-            }
+            Spacer(modifier = Modifier.width(18.dp))
 
             // No menu button up here: on the lyrics page the options button takes the chevron's
             // slot next to the seek bar (BottomSheetPlayer), within reach of the thumb.
@@ -827,6 +822,16 @@ fun LyricsScreen(
                             )
                         }
                     }
+                }
+            }
+
+            if (!unsynced && !followPlayback && lines.isNotEmpty()) {
+                TextButton(
+                    onClick = { followPlayback = true },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                        .background(Color.Black.copy(alpha = 0.75f), CircleShape),
+                ) {
+                    Text(stringResource(R.string.follow_lyrics), color = Color.White)
                 }
             }
 
