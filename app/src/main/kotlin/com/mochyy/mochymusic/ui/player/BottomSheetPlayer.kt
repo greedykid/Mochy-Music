@@ -893,6 +893,7 @@ private fun PlayerSheet(
             com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.ROTATE -> styleTurned
             com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.LYRICS -> showLyrics
             com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.QUEUE -> showQueue
+            com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction.OUTPUT -> showDeviceOutput
             else -> menuExtras.isActive(action)
         }
         val onMenuAction: (com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction) -> Unit = { action ->
@@ -949,6 +950,9 @@ private fun PlayerSheet(
             // holding anywhere on the open flagship opens the studio, not just the cover and card.
             // Only attached while open: this box is full screen and sits above the app, so a
             // pointer handler on it took every touch meant for the app under the mini player
+            expandedDragModifier = if (isFlow) Modifier.flowHeaderDrag(state, statusBarTopInset + 52.dp) {
+                state.isExpanded && !studio.engaged && !showExpandMenu && !showActionMenu && !showDeviceOutput
+            } else Modifier,
             expandedModifier = Modifier.holdAnywhere(
                 enabled = {
                     state.isExpanded && currentPlayerStyle.flagshipFamily && !studio.engaged &&
@@ -1770,7 +1774,6 @@ private fun PlayerSheet(
                 sheet = state,
                 statusBarTop = statusBarTopInset,
                 enabled = { !studio.engaged },
-                followFinger = isFlow,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }

@@ -1,5 +1,6 @@
 package com.mochyy.mochymusic.ui.player.studio
 
+import com.mochyy.mochymusic.ui.player.flow.FlowEditSection
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -82,7 +83,14 @@ fun StudioSheets(
 ) {
     val sheet = studio.sheet ?: return
     if(flow && sheet in setOf(StudioSheet.FLOW,StudioSheet.CONTROLS,StudioSheet.SEEKBAR,StudioSheet.END_TIME)) {
-        com.mochyy.mochymusic.ui.player.flow.FlowOptionsSheet {studio.sheet=null}
+        com.mochyy.mochymusic.ui.player.flow.FlowOptionsSheet(
+            initialSection = when (sheet) {
+                StudioSheet.CONTROLS -> FlowEditSection.PLAYBACK
+                StudioSheet.SEEKBAR, StudioSheet.END_TIME -> FlowEditSection.LYRICS
+                else -> FlowEditSection.FOOTER
+            },
+            onDismiss = { studio.sheet = null },
+        )
         return
     }
     MenuSheetSurface(onDismiss = { studio.sheet = null }, wrapHeight = true) { _ ->

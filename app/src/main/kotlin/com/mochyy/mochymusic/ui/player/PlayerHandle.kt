@@ -41,10 +41,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -158,7 +158,6 @@ fun PlayerHandle(
     /** False while something else owns the top of the player (the studio). */
     enabled: () -> Boolean,
     modifier: Modifier = Modifier,
-    followFinger: Boolean = false,
 ) {
     val currentEnabled by rememberUpdatedState(enabled)
     val bend = remember { Animatable(0f) }
@@ -194,7 +193,7 @@ fun PlayerHandle(
                 targetBounds[2] = bounds.right
                 targetBounds[3] = bounds.bottom
             }
-            .pointerInput(sheet, followFinger) {
+            .pointerInput(sheet) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     // Only on the open player: collapsed, this spot is inside the mini player,
@@ -208,45 +207,14 @@ fun PlayerHandle(
                         return@awaitEachGesture
                     }
                     pressed = true
-                    if (!followFinger) {
-                        val up = waitForUpOrCancellation()
-                        pressed = false
-                        if (up != null) { up.consume(); sheet.collapseSoft() }
-                        return@awaitEachGesture
-                    }
-                    down.consume()
-                    val velocity = VelocityTracker()
-                    velocity.addPosition(down.uptimeMillis, Offset.Zero)
-                    var travel = 0f
-                    var dragging = false
-                    var released = false
                     try {
-                        while (true) {
-                            val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
-                            if (change.isConsumed) break
-                            if (!change.pressed) {
-                                change.consume()
-                                if (dragging) {
-                                    val speed = velocity.calculateVelocity().y
-                                    sheet.release(speed, density,
-                                        collapse = shouldCloseHandle((sheet.expandedBound - sheet.value).value, speed / density))
-                                } else sheet.collapseSoft()
-                                released = true
-                                break
-                            }
-                            val dy = change.positionChange().y
-                            travel += dy
-                            velocity.addPosition(change.uptimeMillis, Offset(0f, travel))
-                            if (!dragging && kotlin.math.abs(travel) > viewConfiguration.touchSlop) {
-                                dragging = true
-                                sheet.hold()
-                                sheet.dragHeld(travel, density)
-                            } else if (dragging) sheet.dragHeld(dy, density)
-                            change.consume()
+                        val up = waitForUpOrCancellation()
+                        if (up != null) {
+                            up.consume()
+                            sheet.collapseSoft()
                         }
                     } finally {
                         pressed = false
-                        if (dragging && !released) sheet.release(0f, density, collapse = false)
                     }
                 }
             }
@@ -359,4 +327,59 @@ internal fun shouldCloseHandle(travelDp: Float, velocityDp: Float): Boolean = wh
     velocityDp > 650f -> true
     velocityDp < -650f -> false
     else -> travelDp > 72f
+}
+
+
+/** Observe the whole header from the stationary expanded container so sheet movement cannot feed
+ * back into pointer coordinates. Taps and horizontal swipes stay with their original targets. */
+@Composable
+internal fun Modifier.flowHeaderDrag(
+    sheet: BottomSheetState,
+    band: Dp,
+    enabled: () -> Boolean,
+): Modifier {
+    val canDrag by rememberUpdatedState(enabled)
+    return pointerInput(sheet, band) {
+        val bandPx = band.toPx()
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            if (!canDrag() || down.position.y !in 0f..bandPx) return@awaitEachGesture
+            val velocity = VelocityTracker()
+            velocity.addPosition(down.uptimeMillis, down.position)
+            var dragging = false
+            var released = false
+            try {
+                while (true) {
+                    val change = awaitPointerEvent(PointerEventPass.Initial).changes
+                        .firstOrNull { it.id == down.id } ?: break
+                    if (change.isConsumed) break
+                    velocity.addPosition(change.uptimeMillis, change.position)
+                    if (!change.pressed) {
+                        if (dragging) {
+                            change.consume()
+                            val speed = velocity.calculateVelocity().y
+                            val distance = (sheet.expandedBound - sheet.value).value
+                            sheet.release(speed, density, collapse = shouldCloseHandle(distance, speed / density))
+                            released = true
+                        }
+                        break
+                    }
+                    val delta = change.position - down.position
+                    if (!dragging) {
+                        val slop = viewConfiguration.touchSlop
+                        if (kotlin.math.abs(delta.x) > slop && kotlin.math.abs(delta.x) > kotlin.math.abs(delta.y)) break
+                        if (kotlin.math.abs(delta.y) <= slop) continue
+                        dragging = true
+                        sheet.hold()
+                        sheet.dragHeld(delta.y, density)
+                    } else {
+                        sheet.dragHeld(change.positionChange().y, density)
+                    }
+                    change.consume()
+                }
+            } finally {
+                if (dragging && !released) sheet.release(0f, density, collapse = false)
+            }
+        }
+    }
 }

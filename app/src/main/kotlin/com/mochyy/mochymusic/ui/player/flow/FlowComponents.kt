@@ -9,6 +9,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.draw.clipToBounds
 import com.mochyy.mochymusic.ui.component.CircularHighlight
@@ -172,12 +177,33 @@ internal fun FlowBottomBar(
             Spacer(Modifier.height(options.footerGap.dp))
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceAround,verticalAlignment=Alignment.CenterVertically) {
                 FlowFooterActions.forEachIndexed { i,action ->
-                    val selected=isSelected(action)
-                    val label=when(i){0->if(selected) "Close lyrics" else "Open lyrics";1->"Change playback device";else->if(selected) "Close queue" else "Open queue"}
-                    Box(Modifier.size(48.dp).onGloballyPositioned{if(!preview)rects[i]=it.boundsInRoot()}
-                        .clickable(enabled=active&&!preview,interactionSource=remember(action){MutableInteractionSource()},indication=CircularHighlight){rects[i]?.let(onPageFrom);onAction(action)},contentAlignment=Alignment.Center) {
-                        if(i==1)Icon(Icons.Rounded.Cast,label,tint=ink.copy(alpha=if(selected) 1f else .85f),modifier=Modifier.size(28.dp))
-                        else Icon(painterResource(if(i==0)R.drawable.lyrics else R.drawable.apple_queue),label,tint=ink.copy(alpha=if(selected) 1f else .85f),modifier=Modifier.size(28.dp))
+                    val isActive = isSelected(action)
+                    val label = when (action) {
+                        PlayerMenuAction.LYRICS -> if (isActive) "Close lyrics" else "Open lyrics"
+                        PlayerMenuAction.OUTPUT -> "Change playback device"
+                        else -> if (isActive) "Close queue" else "Open queue"
+                    }
+                    val interaction = remember(action) { MutableInteractionSource() }
+                    val focused by interaction.collectIsFocusedAsState()
+                    val emphasis by animateFloatAsState(if (isActive) 1f else 0f, tween(180), label = "Flow shortcut active")
+                    val focus by animateFloatAsState(if (focused) 1f else 0f, tween(180), label = "Flow shortcut focus")
+                    val iconModifier = Modifier.size(28.dp).graphicsLayer {
+                        alpha = .72f + .28f * maxOf(emphasis, focus)
+                        scaleX = 1f + .10f * emphasis + .04f * focus
+                        scaleY = scaleX
+                    }
+                    Box(
+                        Modifier.size(48.dp).onGloballyPositioned { if (!preview) rects[i] = it.boundsInRoot() }
+                            .semantics { selected = isActive }
+                            .clickable(enabled = active && !preview, interactionSource = interaction, indication = null) {
+                                rects[i]?.let(onPageFrom)
+                                onAction(action)
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (action == PlayerMenuAction.OUTPUT) Icon(Icons.Rounded.Cast, label, tint = ink, modifier = iconModifier)
+                        else Icon(painterResource(if (action == PlayerMenuAction.LYRICS) R.drawable.lyrics else R.drawable.apple_queue),
+                            label, tint = ink, modifier = iconModifier)
                     }
                 }
             }

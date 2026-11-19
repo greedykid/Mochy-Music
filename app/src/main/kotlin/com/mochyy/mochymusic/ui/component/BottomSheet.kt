@@ -178,6 +178,7 @@ fun BottomSheet(
     modifier: Modifier = Modifier,
     /** Added to [modifier] only while the sheet sits fully open (pill transition only). */
     expandedModifier: Modifier = Modifier,
+    expandedDragModifier: Modifier = Modifier,
     background: @Composable (BoxScope.() -> Unit) = { },
     onDismiss: (() -> Unit)? = null,
     collapsedContent: @Composable BoxScope.() -> Unit,
@@ -366,6 +367,7 @@ fun BottomSheet(
 
             Box(
                 modifier = modifier
+                    .then(if (state.isExpanded || state.isHeld) expandedDragModifier else Modifier)
                     .then(if (state.isExpanded) expandedModifier else Modifier)
                     .fillMaxSize()
                     .nestedScroll(remember(state) { state.preUpPostDownNestedScrollConnection })
