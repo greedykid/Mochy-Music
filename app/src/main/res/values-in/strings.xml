@@ -329,4 +329,5 @@
     <string name="flow_lyrics_loading">Memuat lirik</string>
     <string name="flow_lyrics_waiting">Menunggu vokal</string>
     <string name="flow_lyrics_open">Buka lirik</string>
+    <string name="artist_wordmark_source">Sumber dan kredit wordmark</string>
 </resources>

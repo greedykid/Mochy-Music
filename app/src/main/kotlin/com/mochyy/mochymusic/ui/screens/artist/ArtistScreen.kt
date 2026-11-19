@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -207,6 +208,25 @@ fun ArtistScreen(
     val shelves = remember(page) { page?.let { ArtistShelves(it.sections) } }
     val bio = page?.description?.takeIf { it.isNotBlank() } ?: apple?.bio?.takeIf { it.isNotBlank() }
     val isLocalArtist = libraryArtist?.artist?.isLocal == true
+    val artistId = viewModel.artistId
+    val wordmarkAlbums = remember(page, apple?.latestRelease?.name) {
+        (page?.sections.orEmpty().flatMap { section ->
+            section.items.mapNotNull { (it as? AlbumItem)?.title }
+        } + listOfNotNull(apple?.latestRelease?.name)).filter { it.isNotBlank() }.distinct().take(3)
+    }
+    var commonsWordmark by remember(artistId) {
+        mutableStateOf(ArtistWordmarks.cached(context, artistId))
+    }
+    var failedEditorialLogo by remember(artistId, header?.logoUrl) { mutableStateOf(false) }
+    val editorialLogo = header?.logoUrl?.takeUnless { failedEditorialLogo }
+    LaunchedEffect(artistId, name, wordmarkAlbums, editorialLogo, isLocalArtist) {
+        if (!isLocalArtist && editorialLogo == null && commonsWordmark == null) {
+            commonsWordmark = ArtistWordmarks.resolve(context.applicationContext, artistId, name, wordmarkAlbums)
+        }
+    }
+    val displayedWordmark = commonsWordmark.takeIf { editorialLogo == null && !isLocalArtist }
+    val uriHandler = LocalUriHandler.current
+
 
     // the colour comes off the banner: Apple's frame once it's there, the photo until then
     val themeColor by rememberCoverThemeColor(appleStill ?: photo?.resize(544, 544))
@@ -366,7 +386,15 @@ fun ArtistScreen(
                         ) {
                             ArtistAvatar(url = header?.avatarUrl ?: photo?.resize(544, 544))
                             Spacer(Modifier.height(14.dp))
-                            ArtistName(name = name, logoUrl = header?.logoUrl, logoAspect = header?.logoAspect)
+                            ArtistName(
+                                name = name,
+                                logoUrl = editorialLogo ?: displayedWordmark?.url,
+                                logoAspect = if (editorialLogo != null) header?.logoAspect else displayedWordmark?.aspect,
+                                onLogoError = { if (editorialLogo != null) failedEditorialLogo = true },
+                                onLogoSource = displayedWordmark?.let { wordmark ->
+                                    { uriHandler.openUri(wordmark.source) }
+                                },
+                            )
                             val stats = artistStats(
                                 subscribers = page?.subscriberCountText?.takeIf { showSubscriberCount },
                                 monthly = page?.monthlyListenerCount?.takeIf { showMonthlyListeners },

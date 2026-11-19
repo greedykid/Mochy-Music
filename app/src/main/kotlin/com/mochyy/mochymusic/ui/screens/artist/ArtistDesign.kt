@@ -356,31 +356,43 @@ internal fun ArtistName(
     logoUrl: String?,
     logoAspect: Float?,
     modifier: Modifier = Modifier,
+    onLogoError: () -> Unit = {},
+    onLogoSource: (() -> Unit)? = null,
 ) {
     var logoLoaded by remember(logoUrl) { mutableStateOf(false) }
-    val logoAlpha by animateFloatAsState(if (logoLoaded) 1f else 0f, tween(350), label = "artistLogo")
+    val logoAlpha by animateFloatAsState(if (logoLoaded) 1f else 0f, tween(240), label = "artistLogo")
     Box(modifier = modifier.animateContentSize(spring(dampingRatio = 0.9f, stiffness = 380f))) {
-        if (logoUrl != null) {
-            val aspect = (logoAspect ?: 3f).coerceIn(0.6f, 12f)
-            val width = min(260.dp, 72.dp * aspect)
-            AsyncImage(
-                model = logoUrl,
-                contentDescription = name,
-                contentScale = ContentScale.Fit,
-                alignment = Alignment.BottomStart,
-                onSuccess = { logoLoaded = true },
-                modifier = Modifier
-                    .size(width = width, height = width / aspect)
-                    .graphicsLayer { alpha = logoAlpha },
-            )
-        }
-        if (!logoLoaded) {
+        if (!logoLoaded || logoAlpha < 1f) {
             Text(
                 text = name,
                 style = ArtistNameStyle,
                 color = Color.White,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.graphicsLayer { alpha = 1f - logoAlpha },
+            )
+        }
+        if (logoUrl != null) {
+            val aspect = (logoAspect ?: 3f).coerceIn(0.6f, 12f)
+            val width = min(260.dp, 72.dp * aspect)
+            val sourceDescription = stringResource(R.string.artist_wordmark_source)
+            AsyncImage(
+                model = logoUrl,
+                contentDescription = name.takeIf { logoLoaded },
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.Center,
+                onSuccess = { logoLoaded = true },
+                onError = { logoLoaded = false; onLogoError() },
+                modifier = Modifier
+                    .size(width = width, height = width / aspect)
+                    .graphicsLayer { alpha = logoAlpha }
+                    .then(if (logoLoaded && onLogoSource != null) {
+                        // Preserve the work's original colors, including black marks on dark headers.
+                        Modifier.clip(RoundedCornerShape(8.dp))
+                            .background(Color.White)
+                            .clickable(onClickLabel = sourceDescription, onClick = onLogoSource)
+                            .padding(6.dp)
+                    } else Modifier),
             )
         }
     }

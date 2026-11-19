@@ -436,4 +436,5 @@
     <string name="flow_lyrics_loading">Loading lyrics</string>
     <string name="flow_lyrics_waiting">Waiting for vocals</string>
     <string name="flow_lyrics_open">Open lyrics</string>
+    <string name="artist_wordmark_source">Wordmark source and credits</string>
 </resources>
