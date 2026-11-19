@@ -62,19 +62,27 @@ class TickerScrollFollowTest {
         assertEquals(0f,p.target,.01f)
     }
     @Test fun loadingAndMissingLyricsAreDifferentStates() {
-        assertEquals(FlowLyricStatus.LOADING,flowLyricStatus(true,emptyList(),-1,0))
-        assertEquals(FlowLyricStatus.UNAVAILABLE,flowLyricStatus(false,emptyList(),-1,0))
+        assertEquals(FlowLyricStatus.LOADING, flowLyricStatus(true, emptyList(), -1))
+        assertEquals(FlowLyricStatus.UNAVAILABLE, flowLyricStatus(false, emptyList(), -1))
     }
-    @Test fun introAndOutroDoNotPretendToBeLoading() {
-        val lines=listOf(LyricsEntry(1000,"First"),LyricsEntry(2000,"Second"))
-        assertEquals(FlowLyricStatus.WAITING,flowLyricStatus(false,lines,-1,500))
-        assertEquals(FlowLyricStatus.LINE,flowLyricStatus(false,lines,0,1000))
-        assertEquals(FlowLyricStatus.ENDED,flowLyricStatus(false,lines,2,8000))
+
+    @Test fun shortIntroDoesNotInventWaitingDots() {
+        val lines = listOf(LyricsEntry(1000, "First"), LyricsEntry(2000, "Second"))
+        assertEquals(FlowLyricStatus.LINE, flowLyricStatus(false, lines, -1))
+        assertEquals(FlowLyricStatus.ENDED, flowLyricStatus(false, lines, 2))
     }
-    @Test fun instrumentalGapWaitsForNextVocal() {
-        val lines=listOf(LyricsEntry(0,"First",listOf(WordTimestamp("First",0.0,1.0))),LyricsEntry(5000,"Second"))
-        assertEquals(FlowLyricStatus.WAITING,flowLyricStatus(false,lines,0,3000))
-        assertEquals(FlowLyricStatus.LINE,flowLyricStatus(false,lines,1,5000))
+
+    @Test fun sharesDetailInstrumentalBoundaries() {
+        val first = LyricsEntry(0, "First", listOf(WordTimestamp("First", 0.0, 1.0)))
+        fun status(nextStart: Long, position: Long): FlowLyricStatus {
+            val lines = listOf(first, LyricsEntry(nextStart, "Second"))
+            val waiting = activeInterludeOf(buildLyricRows(lines), position) != NoInterlude
+            return flowLyricStatus(false, lines, flowLyricIndex(lines, position, 0), waiting = waiting)
+        }
+        assertEquals(FlowLyricStatus.LINE, status(3500, 2000))
+        assertEquals(FlowLyricStatus.WAITING, status(5000, 1000))
+        assertEquals(FlowLyricStatus.WAITING, status(5000, 4699))
+        assertEquals(FlowLyricStatus.LINE, status(5000, 4700))
     }
     @Test fun nextLineDoesNotReplaceQuickLastWordEarly() {
         val lines=listOf(LyricsEntry(0,"Fast end"),LyricsEntry(800,"Next"))

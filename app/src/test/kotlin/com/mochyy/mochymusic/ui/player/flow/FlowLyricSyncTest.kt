@@ -10,9 +10,14 @@ class FlowLyricSyncTest {
         LyricsEntry(1_000, "First"), LyricsEntry(5_000, "Second"), LyricsEntry(10_000, "Third"),
     )
 
-    @Test fun followsAudioWithoutCuttingOffFastEndWords() {
-        val expected=mapOf(0L to -1, 999L to -1, 1_000L to 0, 4_999L to 0, 5_000L to 1, 10_000L to 2, 15_000L to 3)
-        expected.forEach { (position,index) -> assertEquals(index,flowLyricIndex(lines,position,0)) }
+    @Test fun usesDetailLeadInAndKeepsAnUnfinishedWord() {
+        val timed = listOf(
+            LyricsEntry(1_000, "First", listOf(com.mochyy.mochymusic.lyrics.WordTimestamp("First", 1.0, 4.95))),
+            LyricsEntry(5_000, "Next"),
+        )
+        assertEquals(0, flowLyricIndex(timed, 4_850, 0))
+        assertEquals(1, flowLyricIndex(timed, 4_950, 0))
+        assertEquals(1, flowLyricIndex(lines, 4_850, 0))
     }
     @Test fun seekingInEitherDirectionSelectsDestinationDirectly() {
         assertEquals(2, flowLyricIndex(lines, 11_000, 0))

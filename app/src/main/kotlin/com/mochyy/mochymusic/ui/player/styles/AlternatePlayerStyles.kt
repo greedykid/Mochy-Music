@@ -109,7 +109,7 @@ internal fun rememberStyleCarousel(preview: Boolean): com.mochyy.mochymusic.ui.p
     if (preview) null else com.mochyy.mochymusic.ui.player.LocalSongCarousel.current
 
 /** a song's synced lines, and which song they're for */
-internal class StyleLyrics(val mediaId: String?, val lines: List<LyricsEntry>, val loading: Boolean = false)
+internal class StyleLyrics(val mediaId: String?, val lines: List<LyricsEntry>, val loading: Boolean = false, val timeline: List<LyricsEntry> = lines)
 
 /** what a style shows for one song in the row: its details, and its lyrics once it has played */
 internal class StyleSong(val track: StyleTrack, val lines: List<LyricsEntry>)
@@ -623,7 +623,7 @@ internal fun rememberStyleLyrics(readings: Boolean): StyleLyrics {
         }
     }
     val lines = remember(all) { all.filter { !it.isBackground && it.text.isNotBlank() } }
-    return remember(lyricsEntity?.id, lines, loading) { StyleLyrics(lyricsEntity?.id, lines, loading) }
+    return remember(lyricsEntity?.id, lines, loading, all) { StyleLyrics(lyricsEntity?.id, lines, loading, all) }
 }
 
 /**

@@ -43,6 +43,14 @@ import com.mochyy.mochymusic.lyrics.LyricsEntry
 import com.mochyy.mochymusic.ui.player.PlaybackClock
 import com.mochyy.mochymusic.ui.player.TickerLine
 import com.mochyy.mochymusic.constants.LyricsMotionStyle
+import com.mochyy.mochymusic.constants.LyricsMotionStyleKey
+import com.mochyy.mochymusic.constants.LyricsHighBloomKey
+import com.mochyy.mochymusic.ui.player.LyricsInterludeDots
+import com.mochyy.mochymusic.ui.player.LyricRow
+import com.mochyy.mochymusic.ui.player.activeInterludeOf
+import com.mochyy.mochymusic.ui.player.buildLyricRows
+import com.mochyy.mochymusic.utils.rememberEnumPreference
+import com.mochyy.mochymusic.utils.rememberPreference
 import com.mochyy.mochymusic.ui.player.rememberMusicVolume
 import com.mochyy.mochymusic.ui.player.studio.PlayerMenuAction
 import com.mochyy.mochymusic.ui.player.styles.rememberStyleLyrics
@@ -68,7 +76,7 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     val connection=LocalPlayerConnection.current
     val lyrics=rememberStyleLyrics(readings=active&&!preview)
     val info=connection?.uiState?.trackInfo?.collectAsState()?.value
-    val lines=lyrics.lines.takeIf{lyrics.mediaId==info?.mediaId}.orEmpty()
+    val lines=lyrics.timeline.takeIf{lyrics.mediaId==info?.mediaId}.orEmpty()
     // Use the same authoritative progress and offset as LyricsScreen. A line only needs the
     // 66 ms playback updates; a cached drawing clock could hold a stale line on pause/offset edits.
     val progress=connection?.progressState?.collectAsState()
@@ -76,13 +84,20 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     val index by remember(lines,progress,offset){derivedStateOf{
         flowLyricIndex(lines,progress?.value?.position?:0L,offset?.value?.toLong()?:0L)
     }}
-    val status by remember(lines,index,progress,offset,lyrics.loading,preview) { derivedStateOf {
-        flowLyricStatus(lyrics.loading,lines,index,
-            (progress?.value?.position?:0L)+(offset?.value?.toLong()?:0L),preview)
-    }}
+    val interludes = remember(lines) { buildLyricRows(lines).filterIsInstance<LyricRow.Interlude>() }
+    val gap by remember(interludes, progress, offset) { derivedStateOf {
+        val position = (progress?.value?.position ?: 0L) + (offset?.value?.toLong() ?: 0L)
+        val afterIndex = activeInterludeOf(interludes, position)
+        interludes.firstOrNull { it.afterIndex == afterIndex }
+    } }
+    val status = flowLyricStatus(lyrics.loading, lines, index, preview, waiting = gap != null)
     val origin=remember{arrayOfNulls<Rect>(1)}
-    val line=if(preview)"Your current lyric line appears here" else lines.getOrNull(index)?.text?:"Open lyrics"
-    val frame=FlowLyricFrame(info?.mediaId,index,line,lines.getOrNull(index).takeIf{status==FlowLyricStatus.LINE},status)
+    val entry = if (status == FlowLyricStatus.LINE) lines.getOrNull(index.coerceAtLeast(0)) else null
+    val line = if (preview) "Your current lyric line appears here" else entry?.text.orEmpty()
+    val frame = FlowLyricFrame(info?.mediaId, index, line, entry, status, gap,
+        LyricsUtils.lineEndMs(lines, index.coerceAtLeast(0)))
+    val (motionStyle) = rememberEnumPreference(LyricsMotionStyleKey, defaultValue = LyricsMotionStyle.MOTION)
+    val (highBloom) = rememberPreference(LyricsHighBloomKey, defaultValue = true)
     val clock=remember(connection){PlaybackClock({connection?.player},{connection?.lyricsOffsetMs?.value?.toLong()?:0L})}
     val open={origin[0]?.let(onPageFrom);onOpen()}
     Row(modifier.fillMaxWidth().padding(horizontal=32.dp).heightIn(min=40.dp)
@@ -105,10 +120,15 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
                 }
             },label="Flow lyric line") { shown ->
             val entry=shown.entry
-            if(active && !preview && entry!=null) {
+            val interlude = shown.gap
+            if (active && !preview && interlude != null) {
+                LyricsInterludeDots(startMs = interlude.startMs, endMs = interlude.endMs,
+                    positionProvider = clock, alignment = com.mochyy.mochymusic.ui.player.LyricsAlignment.START,
+                    bloom = motionStyle.shaded, highBloom = highBloom)
+            } else if(active && !preview && entry!=null) {
                 TickerLine(entry=entry,dim=false,
-                    lineEndMs=LyricsUtils.lineEndMs(lines,shown.index),positionProvider=clock,
-                    motionStyle=LyricsMotionStyle.PLAIN,waveEnabled=false,highBloom=false,morph=null,
+                    lineEndMs=shown.endMs,positionProvider=clock,
+                    motionStyle=motionStyle,waveEnabled=motionStyle.shaded,highBloom=highBloom,morph=null,
                     fontSize=options.lyricSize.sp,ink=flowColor(options.activeColor),snapOnSeek=true)
             } else if(shown.status!=FlowLyricStatus.LINE && shown.status!=FlowLyricStatus.PREVIEW) {
                 FlowLyricPlaceholder(shown.status,flowColor(options.activeColor),options.lyricSize.sp,active&&!preview)
@@ -122,7 +142,7 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
     }
 }
 
-private data class FlowLyricFrame(val song:String?,val index:Int,val text:String,val entry:LyricsEntry?,val status:FlowLyricStatus)
+private data class FlowLyricFrame(val song:String?,val index:Int,val text:String,val entry:LyricsEntry?,val status:FlowLyricStatus,val gap:LyricRow.Interlude?,val endMs:Long)
 
 internal val FlowFooterActions=listOf(PlayerMenuAction.LYRICS,PlayerMenuAction.OUTPUT,PlayerMenuAction.QUEUE)
 
