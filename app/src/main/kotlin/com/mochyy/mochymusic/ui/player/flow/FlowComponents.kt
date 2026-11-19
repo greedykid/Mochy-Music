@@ -124,7 +124,8 @@ internal fun FlowLyricTicker(options:FlowOptions,active:Boolean,onOpen:()->Unit,
             if (active && !preview && interlude != null) {
                 LyricsInterludeDots(startMs = interlude.startMs, endMs = interlude.endMs,
                     positionProvider = clock, alignment = com.mochyy.mochymusic.ui.player.LyricsAlignment.START,
-                    bloom = motionStyle.shaded, highBloom = highBloom)
+                    bloom = motionStyle.shaded, highBloom = highBloom,
+                    rowHeight = 40.dp, horizontalInset = 0.dp)
             } else if(active && !preview && entry!=null) {
                 TickerLine(entry=entry,dim=false,
                     lineEndMs=shown.endMs,positionProvider=clock,

@@ -86,6 +86,8 @@ fun LyricsInterludeDots(
     highBloom: Boolean = true,
     /** told where the first dot's left edge and middle are inside the row (px), for the dots the card grows into */
     onDotsStart: ((Offset) -> Unit)? = null,
+    rowHeight: androidx.compose.ui.unit.Dp = RowHeight,
+    horizontalInset: androidx.compose.ui.unit.Dp = LyricsHeaderArtX,
 ) {
     // the row's own frame, so the first dot can say where it sits inside it
     val rowCoords = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
@@ -152,7 +154,7 @@ fun LyricsInterludeDots(
             .fillMaxWidth()
             // the height is real layout, so the lines below truly move to make room and take it back when the gap ends
             .layout { measurable, constraints ->
-                val full = RowHeight.roundToPx()
+                val full = rowHeight.roundToPx()
                 val placeable = measurable.measure(constraints.copy(minHeight = full, maxHeight = full))
                 val shown = (full * height.value.coerceIn(0f, 1f)).roundToInt()
                 layout(placeable.width, shown) {
@@ -161,8 +163,8 @@ fun LyricsInterludeDots(
             }
             // after the layout, so it covers the full row and not the shrinking slot
             .damageBoundary()
-            .height(RowHeight)
-            .padding(horizontal = LyricsHeaderArtX)
+            .height(rowHeight)
+            .padding(horizontal = horizontalInset)
             .graphicsLayer { alpha = height.value.coerceIn(0f, 1f) },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = when (alignment) {
