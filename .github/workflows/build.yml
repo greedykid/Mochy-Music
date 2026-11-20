@@ -2,6 +2,14 @@ name: CI & Optimized APK Build
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: APK build mode
+        type: choice
+        default: optimized
+        options:
+          - optimized
+          - preview
   push:
     branches: [ '**' ]
     paths-ignore:
@@ -17,15 +25,11 @@ permissions:
 
 jobs:
   build_optimized:
-    name: Optimized ${{ matrix.abi }} GMS APK
+    name: ${{ matrix.build_type }} ${{ matrix.abi }} GMS APK
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - abi: universal
-            variant: Universal
-          - abi: arm64
-            variant: Arm64
+        include: ${{ fromJSON(inputs.mode == 'preview' && '[{"abi":"arm64","variant":"Arm64","build_type":"Fast","output_type":"fast"}]' || '[{"abi":"universal","variant":"Universal","build_type":"Optimized","output_type":"optimized"},{"abi":"arm64","variant":"Arm64","build_type":"Optimized","output_type":"optimized"}]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     if: github.actor != 'dependabot[bot]'
@@ -65,9 +69,10 @@ jobs:
             keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Test and build optimized APK
+      - name: Build APK and run applicable tests
         env:
           ABI_VARIANT: ${{ matrix.variant }}
+          BUILD_TYPE: ${{ matrix.build_type }}
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
           LIBREFM_API_KEY: ${{ secrets.LIBREFM_API_KEY }}
@@ -75,19 +80,19 @@ jobs:
           DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
         shell: bash
         run: |
-          task_args=(":app:assemble${ABI_VARIANT}GmsOptimized")
-          if [ "$ABI_VARIANT" = "Universal" ]; then
+          task_args=(":app:assemble${ABI_VARIANT}Gms${BUILD_TYPE}")
+          if [ "$ABI_VARIANT" = "Universal" ] && [ "$BUILD_TYPE" = "Optimized" ]; then
             task_args=(":app:testUniversalGmsDebugUnitTest" --tests "com.mochyy.mochymusic.ui.player.drizzy.DrizzyDesignTest" --tests "com.mochyy.mochymusic.ui.player.flow.*Test" "${task_args[@]}")
           fi
           ./gradlew "${task_args[@]}" -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs="-Xmx5g -XX:+UseParallelGC -Dfile.encoding=UTF-8" --no-parallel --max-workers=2 --no-configuration-cache --console=plain --warning-mode summary
 
-      - name: Upload optimized APKs and validation reports
+      - name: Upload APK and available build reports
         uses: actions/upload-artifact@v4
         with:
-          name: app-optimized-${{ matrix.abi }}
+          name: app-${{ matrix.output_type }}-${{ matrix.abi }}
           path: |
-            app/build/outputs/apk/${{ matrix.abi }}Gms/optimized/*.apk
-            app/build/outputs/mapping/${{ matrix.abi }}GmsOptimized/*.txt
+            app/build/outputs/apk/${{ matrix.abi }}Gms/${{ matrix.output_type }}/*.apk
+            app/build/outputs/mapping/${{ matrix.abi }}Gms${{ matrix.build_type }}/*.txt
             app/build/test-results/testUniversalGmsDebugUnitTest/*.xml
           retention-days: 7
           if-no-files-found: error

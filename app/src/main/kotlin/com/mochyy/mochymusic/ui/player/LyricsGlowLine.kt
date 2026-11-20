@@ -1012,7 +1012,7 @@ half4 main(float2 coord) {
 internal class SweepProbe {
     /** The sweep's x in the text's own coordinates, 0 before it starts. */
     var headX = 0f
-    var textWidth = 0f
+    var textWidth by mutableFloatStateOf(0f)
     var wordBounds: List<TickerWordBounds> = emptyList()
 }
 

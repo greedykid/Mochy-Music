@@ -496,8 +496,17 @@ internal fun TickerLine(
     val viewport = remember { mutableFloatStateOf(0f) }
     val scroll = remember(entry) { mutableFloatStateOf(0f) }
 
+    val overflows by remember(probe, viewport) {
+        derivedStateOf { viewport.floatValue > 0f && probe.textWidth > viewport.floatValue }
+    }
+
     // Use measured word edges and timestamps, not a delayed probe from the previous draw.
-    LaunchedEffect(entry, karaoke, lineEndMs, positionProvider, snapOnSeek) {
+    LaunchedEffect(entry, karaoke, lineEndMs, positionProvider, snapOnSeek, overflows, morph) {
+        if (!overflows) {
+            scroll.floatValue = 0f
+            morph?.cardLyricScroll = 0f
+            return@LaunchedEffect
+        }
         val follower = TickerScrollFollower()
         var lastMs = -1L
         var previousPosition: Long? = null
@@ -528,26 +537,28 @@ internal fun TickerLine(
             .fillMaxSize()
             .onSizeChanged { viewport.floatValue = it.width.toFloat() }
             .clipToBounds()
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-            .drawWithContent {
-                drawContent()
-                // Fade only the edge the line actually runs past, and only as far as it does.
-                val overflow = (probe.textWidth - size.width).coerceAtLeast(0f)
-                if (overflow <= 0f) return@drawWithContent
-                val fade = TickerEdgeFade.toPx()
-                val left = (scroll.floatValue / fade).coerceIn(0f, 1f)
-                val right = ((overflow - scroll.floatValue) / fade).coerceIn(0f, 1f)
-                val edge = (fade / size.width).coerceIn(0f, 0.5f)
-                drawRect(
-                    brush = Brush.horizontalGradient(
-                        0f to Color.Black.copy(alpha = 1f - left),
-                        edge to Color.Black,
-                        1f - edge to Color.Black,
-                        1f to Color.Black.copy(alpha = 1f - right),
-                    ),
-                    blendMode = BlendMode.DstIn,
-                )
-            },
+            .then(if (overflows) {
+                Modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        // Fade only the edge the line actually runs past, and only as far as it does.
+                        val overflow = (probe.textWidth - size.width).coerceAtLeast(0f)
+                        if (overflow <= 0f) return@drawWithContent
+                        val fade = TickerEdgeFade.toPx()
+                        val left = (scroll.floatValue / fade).coerceIn(0f, 1f)
+                        val right = ((overflow - scroll.floatValue) / fade).coerceIn(0f, 1f)
+                        val edge = (fade / size.width).coerceIn(0f, 0.5f)
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                0f to Color.Black.copy(alpha = 1f - left),
+                                edge to Color.Black,
+                                1f - edge to Color.Black,
+                                1f to Color.Black.copy(alpha = 1f - right),
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }
+            } else Modifier),
     ) {
         Box(
             modifier = Modifier

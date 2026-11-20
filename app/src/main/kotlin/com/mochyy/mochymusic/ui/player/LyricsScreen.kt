@@ -323,7 +323,7 @@ fun LyricsScreen(
     }
 
     val anchorIndex by remember(lines, unsynced) {
-        derivedStateOf { if (unsynced) -1 else lyricAnchorIndex(lines, progress.position + lyricsOffsetMs) }
+        derivedStateOf { lyricAnchorIndex(lines, progress.position + lyricsOffsetMs, currentIndex) }
     }
 
     // Every instrumental gap in the song, as its own list row. Building these up front — rather
@@ -355,7 +355,12 @@ fun LyricsScreen(
     var followPlayback by remember { mutableStateOf(true) }
 
     // What the card is showing: the page's copy of it (a line, or the dots of a gap) is what the card grows into.
-    val cardSlot by remember(lines) { derivedStateOf { tickerSlot(lines, progress.position + lyricsOffsetMs) } }
+    val cardSlot by remember(lines, morph) {
+        derivedStateOf {
+            if (morph == null) TickerSlot(TickerSlot.EMPTY, -1)
+            else tickerSlot(lines, progress.position + lyricsOffsetMs)
+        }
+    }
     val cardLine by remember { derivedStateOf { if (cardSlot.kind == TickerSlot.LINE) cardSlot.index else -1 } }
     val cardGap by remember { derivedStateOf { if (cardSlot.kind == TickerSlot.GAP) cardSlot.index else NoCardGap } }
     // its row, read only inside layers so the card moving on doesn't recompose every row
@@ -491,8 +496,9 @@ fun LyricsScreen(
     }
 
     /** Which gap, if any, is happening right now. [NoInterlude] when a line is being sung. */
-    val activeInterlude by remember(lines, rows) {
-        derivedStateOf { activeInterludeOf(rows, progress.position + lyricsOffsetMs) }
+    val interludes = remember(rows) { rows.filterIsInstance<LyricRow.Interlude>() }
+    val activeInterlude by remember(interludes) {
+        derivedStateOf { activeInterludeOf(interludes, progress.position + lyricsOffsetMs) }
     }
 
     // Only honour {agent:v1}/{agent:v2} when the song actually has more than one voice. A solo
@@ -858,8 +864,12 @@ fun LyricsScreen(
 internal const val NoInterlude = Int.MIN_VALUE
 
 // the line the list rests on: the sung one, or an earlier one whose words are still running into it
-internal fun lyricAnchorIndex(lines: List<LyricsEntry>, positionMs: Long): Int {
-    var i = LyricsUtils.findCurrentLineIndex(lines, positionMs)
+internal fun lyricAnchorIndex(
+    lines: List<LyricsEntry>,
+    positionMs: Long,
+    currentIndex: Int = LyricsUtils.findCurrentLineIndex(lines, positionMs),
+): Int {
+    var i = currentIndex
     // findCurrentLineIndex returns lines.size once playback is past the final line. Don't
     // walk back from there looking for an anchor — there is no active line to anchor.
     if (i <= 0 || i >= lines.size) return i
