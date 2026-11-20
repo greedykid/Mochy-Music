@@ -2,6 +2,10 @@
 
 package com.mochyy.mochymusic.ui.component
 
+import androidx.compose.material3.MaterialTheme
+import com.mochyy.mochymusic.ui.theme.AppThemePreset
+import com.mochyy.mochymusic.ui.theme.LocalAppThemePreset
+
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -138,6 +142,7 @@ fun HomeSectionTitle(
     thumbnail: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
+    val flow = LocalAppThemePreset.current == AppThemePreset.FLOW
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -178,8 +183,8 @@ fun HomeSectionTitle(
             }
             Text(
                 text = title,
-                style = HomeLabelStyle,
-                color = SectionLabelColor,
+                style = if (flow) MaterialTheme.typography.titleLarge else HomeLabelStyle,
+                color = if (flow) MaterialTheme.colorScheme.onSurface else SectionLabelColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -232,6 +237,7 @@ fun HomeCoverCard(
     badges: @Composable RowScope.() -> Unit = {},
     cover: (@Composable (Dp) -> Unit)? = null,
 ) {
+    val flow = LocalAppThemePreset.current == AppThemePreset.FLOW
     val size = homeCardSize()
     val shape = if (circular) CircleShape else RoundedCornerShape(HomeCardCornerRadius)
 
@@ -259,7 +265,7 @@ fun HomeCoverCard(
         Text(
             text = title,
             style = HomeCardTitleStyle,
-            color = Color.White.copy(alpha = 0.92f),
+            color = if (flow) MaterialTheme.colorScheme.onSurface else Color.White.copy(alpha = 0.92f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = if (circular) TextAlign.Center else TextAlign.Start,
@@ -271,7 +277,7 @@ fun HomeCoverCard(
                 Text(
                     text = subtitle,
                     style = HomeCardSubtitleStyle,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = if (flow) MaterialTheme.colorScheme.onSurfaceVariant else Color.White.copy(alpha = 0.5f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

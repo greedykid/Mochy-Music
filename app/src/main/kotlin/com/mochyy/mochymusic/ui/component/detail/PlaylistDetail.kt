@@ -1213,6 +1213,9 @@ internal fun PlaylistDescription(text: String, modifier: Modifier = Modifier) {
 /** play and pause swap with a little pop, and the pill eases to the new label's width */
 @Composable
 internal fun PlayPill(isPlaying: Boolean, onClick: () -> Unit) {
+    val flow = LocalAppThemePreset.current == AppThemePreset.FLOW
+    val fill = if (flow) MaterialTheme.colorScheme.primary else PillFill
+    val ink = if (flow) MaterialTheme.colorScheme.onPrimary else PillContent
     val interaction = remember { MutableInteractionSource() }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -1220,7 +1223,7 @@ internal fun PlayPill(isPlaying: Boolean, onClick: () -> Unit) {
             .pressBounce(interaction)
             .height(33.dp)
             .clip(RoundedCornerShape(50))
-            .background(PillFill)
+            .background(fill)
             .clickable(interactionSource = interaction, indication = RemoteFocus, onClick = onClick)
             .animateContentSize(spring(dampingRatio = 0.7f, stiffness = 500f))
             .padding(start = 21.dp, end = 17.dp)
@@ -1233,7 +1236,7 @@ internal fun PlayPill(isPlaying: Boolean, onClick: () -> Unit) {
             Icon(
                 painter = painterResource(if (playing) R.drawable.ic_untitled_pause else R.drawable.ic_untitled_play),
                 contentDescription = null,
-                tint = PillContent,
+                tint = ink,
                 modifier = Modifier.size(15.dp),
             )
         }
@@ -1246,7 +1249,7 @@ internal fun PlayPill(isPlaying: Boolean, onClick: () -> Unit) {
             Text(
                 text = stringResource(if (playing) R.string.pause else R.string.play),
                 style = PillLabelStyle,
-                color = PillContent,
+                color = ink,
             )
         }
     }

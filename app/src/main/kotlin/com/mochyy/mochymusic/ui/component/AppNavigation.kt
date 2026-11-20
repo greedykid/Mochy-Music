@@ -6,6 +6,13 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextOverflow
+import com.mochyy.mochymusic.ui.theme.AppThemePreset
+import com.mochyy.mochymusic.ui.theme.LocalAppThemePreset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -242,6 +249,8 @@ fun AppNavigationBar(
         )
         return
     }
+    val flow = LocalAppThemePreset.current == AppThemePreset.FLOW
+    val barShape = if (flow) RoundedCornerShape(20.dp) else NavBarShape
     val glassState = LocalGlassState.current ?: remember { GlassState() }
     val accentWash = rememberChromeAccentWash()
     val selectedIndex = navigationItems.indexOfFirst { it.route == selectedTabRoute }
@@ -263,11 +272,11 @@ fun AppNavigationBar(
                 .align(Alignment.TopCenter)
                 .height(NavBarHeight)
                 .press3D(maxTilt = 4f, pressedScale = 0.985f)
-                .then(if (moduleGlass?.shadow == false) Modifier else Modifier.dropShadow(NavBarShape, ChromeShadow))
-                .clip(NavBarShape)
+                .then(if (moduleGlass?.shadow == false) Modifier else Modifier.dropShadow(barShape, ChromeShadow))
+                .clip(barShape)
                 .drawWithContent {
                     drawContent()
-                    if (moduleGlass?.outline != false) drawChromeOutline(Offset.Zero, size, cornerRadius = size.height / 2f)
+                    if (moduleGlass?.outline != false) drawChromeOutline(Offset.Zero, size, cornerRadius = if (flow) 20.dp.toPx() else size.height / 2f)
                 }
         ) {
             FrostedChromeGlass(
@@ -330,6 +339,8 @@ internal fun RowScope.NavTab(
     onItemClick: (Screens, Boolean) -> Unit,
     onDoubleTap: (() -> Unit)?,
 ) {
+    val flow = LocalAppThemePreset.current == AppThemePreset.FLOW
+    val activeColor = if (flow) MaterialTheme.colorScheme.primary else Color.White
     val viewConfiguration = LocalViewConfiguration.current
     val interactionSource = remember { MutableInteractionSource() }
     val lastTap = remember { longArrayOf(0L) }
@@ -360,10 +371,24 @@ internal fun RowScope.NavTab(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (screen == Screens.Library) {
-            LibraryDownloadIcon { TabIcons(screen, unlitIcon, litIcon, iconSize) { lit.value } }
-        } else {
-            TabIcons(screen, unlitIcon, litIcon, iconSize) { lit.value }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+        ) {
+            val icons: @Composable () -> Unit = {
+                TabIcons(screen, unlitIcon, litIcon, iconSize, activeColor, showLabel = flow) { lit.value }
+            }
+            if (screen == Screens.Library) LibraryDownloadIcon { icons() } else icons()
+            if (flow) {
+                Text(
+                    text = stringResource(screen.titleId),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isSelected) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 2.dp),
+                )
+            }
         }
     }
 }
@@ -375,12 +400,14 @@ private fun TabIcons(
     unlitIcon: androidx.compose.ui.graphics.painter.Painter,
     litIcon: androidx.compose.ui.graphics.painter.Painter,
     iconSize: androidx.compose.ui.unit.Dp,
+    activeColor: Color,
+    showLabel: Boolean,
     lit: () -> Float,
 ) {
     Box(contentAlignment = Alignment.Center) {
         Icon(
             painter = unlitIcon,
-            contentDescription = stringResource(screen.titleId),
+            contentDescription = if (showLabel) null else stringResource(screen.titleId),
             tint = Color.White,
             modifier = Modifier
                 .size(iconSize)
@@ -392,7 +419,7 @@ private fun TabIcons(
         Icon(
             painter = litIcon,
             contentDescription = null,
-            tint = Color.White,
+            tint = activeColor,
             modifier = Modifier
                 .size(iconSize)
                 .graphicsLayer {

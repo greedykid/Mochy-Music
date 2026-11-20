@@ -210,6 +210,7 @@ fun AlbumScreen(
     PlaylistDetailScaffold(
         sharedElementKey = "album-${viewModel.albumId}",
         coverUrl = album?.album?.thumbnailUrl,
+        playlistTitle = album?.album?.title,
         lazyListState = lazyListState,
         onBackClick = { navController.navigateUp() },
         onBackLongClick = { navController.backToMain() },

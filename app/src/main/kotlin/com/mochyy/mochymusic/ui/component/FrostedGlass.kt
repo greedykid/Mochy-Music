@@ -2,6 +2,9 @@
 
 package com.mochyy.mochymusic.ui.component
 
+import com.mochyy.mochymusic.ui.theme.AppThemePreset
+import com.mochyy.mochymusic.ui.theme.LocalAppThemePreset
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -89,7 +92,12 @@ fun FrostedChromeGlass(
         ModuleChromeGlass(state, moduleGlass, pureBlack, accentWash, surface, modifier, pill)
         return
     }
-    val color = if (pureBlack) Color.Black else GlassChromeColor
+    val flow = LocalAppThemePreset.current == AppThemePreset.FLOW
+    val color = when {
+        pureBlack -> Color.Black
+        flow -> Color(0xFF252031)
+        else -> GlassChromeColor
+    }
     // the grain only matters on the finer, high quality glass
     val grain = LocalBlurQuality.current == com.mochyy.mochymusic.constants.BlurQuality.HIGH
     Box(

@@ -2,6 +2,8 @@
 
 package com.mochyy.mochymusic.ui.screens.search
 
+import com.mochyy.mochymusic.ui.theme.AppThemePreset
+import com.mochyy.mochymusic.ui.theme.LocalAppThemePreset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -463,6 +465,15 @@ fun SearchField(
     focusRequester: FocusRequester? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
+    val flow = LocalAppThemePreset.current == AppThemePreset.FLOW
+    val colors = MaterialTheme.colorScheme
+    val fieldColor = when {
+        flow && focused -> colors.surfaceContainerHigh
+        flow -> colors.surfaceContainer
+        focused -> SearchColors.FieldFocused
+        else -> SearchColors.Field
+    }
+    val textColor = if (flow) colors.onSurface else SearchColors.Primary
     val playerSheet = LocalPlayerBottomSheetState.current
     val focusManager = LocalFocusManager.current
     var fieldHasFocus by remember { mutableStateOf(false) }
@@ -481,8 +492,8 @@ fun SearchField(
         modifier = modifier
             .fillMaxWidth()
             .height(SearchFieldHeight)
-            .clip(RoundedCornerShape(50))
-            .background(if (focused) SearchColors.FieldFocused else SearchColors.Field)
+            .clip(if (flow) MaterialTheme.shapes.medium else RoundedCornerShape(50))
+            .background(fieldColor)
             .then(
                 if (readOnlyClick != null) {
                     Modifier.clickable(
@@ -506,7 +517,7 @@ fun SearchField(
                 Text(
                     text = placeholder,
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-                    color = SearchColors.Placeholder,
+                    color = if (flow) colors.onSurfaceVariant else SearchColors.Placeholder,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -517,9 +528,9 @@ fun SearchField(
                     onValueChange = onValueChange,
                     singleLine = true,
                     textStyle = LocalTextStyle.current.merge(
-                        TextStyle(color = SearchColors.Primary, fontSize = 15.sp)
+                        TextStyle(color = textColor, fontSize = 15.sp)
                     ),
-                    cursorBrush = SolidColor(SearchColors.Primary),
+                    cursorBrush = SolidColor(if (flow) colors.primary else textColor),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { onSearch(value.text) }),
                     modifier = Modifier
