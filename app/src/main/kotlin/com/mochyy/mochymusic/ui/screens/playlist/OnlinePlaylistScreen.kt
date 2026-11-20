@@ -187,6 +187,7 @@ fun OnlinePlaylistScreen(
     PlaylistDetailScaffold(
         sharedElementKey = "playlist-${viewModel.playlistId}",
         coverUrl = coverUrl,
+        playlistTitle = playlist?.title,
         lazyListState = lazyListState,
         onBackClick = { navController.navigateUp() },
         onBackLongClick = { navController.backToMain() },

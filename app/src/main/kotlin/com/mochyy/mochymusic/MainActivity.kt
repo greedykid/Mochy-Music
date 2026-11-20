@@ -206,6 +206,8 @@ import com.mochyy.mochymusic.ui.screens.NavigationTab
 import com.mochyy.mochymusic.ui.theme.ColorSaver
 import com.mochyy.mochymusic.ui.theme.DefaultThemeColor
 import com.mochyy.mochymusic.ui.theme.MochyTheme
+import com.mochyy.mochymusic.ui.theme.AppThemePreset
+import com.mochyy.mochymusic.ui.theme.AppThemePresetKey
 import com.mochyy.mochymusic.ui.theme.extractThemeColor
 import com.mochyy.mochymusic.ui.utils.appBarScrollBehavior
 import com.mochyy.mochymusic.ui.utils.resetHeightOffset
@@ -617,7 +619,11 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val (appThemePreset) = com.mochyy.mochymusic.utils.rememberEnumPreference(
+            AppThemePresetKey, defaultValue = AppThemePreset.DEFAULT,
+        )
         MochyTheme(
+            preset = appThemePreset,
             darkTheme = useDarkTheme,
             pureBlack = pureBlack,
         ) {

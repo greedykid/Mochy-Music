@@ -119,6 +119,7 @@ fun GestureScreen(navController: NavController) = CustomisationScreen(navControl
 
 // the customize page's parts in order, with what a search or a settings result can find each one by
 private enum class CustomiseSection(@StringRes val titleRes: Int, val keys: List<String>, val words: String) {
+    THEME(R.string.customise_title, listOf("App theme"), "theme preset flow default tema aplikasi"),
     ICONS(R.string.customise_icons, listOf("Icons", "App icon"), "icon icons app launcher home screen mochy outline anime material you white black dark transparent"),
     ROUNDING(R.string.customise_cover_rounding, listOf("Cover rounding"), "cover rounding corner radius square rounded art"),
     PLAYLIST(R.string.customise_playlist_styles, listOf("Playlist styles"), "playlist styles flow classic minimal header"),
@@ -150,7 +151,9 @@ fun CustomisationScreen(navController: NavController) {
     var query by remember { mutableStateOf("") }
     val statusTop = WindowInsets.stableStatusBars.asPaddingValues().calculateTopPadding()
     val bottomInset = LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding()
-    val titles = CustomiseSection.entries.associateWith { stringResource(it.titleRes) }
+    val titles = CustomiseSection.entries.associateWith {
+        if (it == CustomiseSection.THEME) "App theme" else stringResource(it.titleRes)
+    }
     val shown = CustomiseSection.entries.filter { it.available && it.matches(query, titles.getValue(it)) }
     val scroll = rememberScrollState()
     // nothing stays pinned over this page, so a highlighted section lands just under the status bar
@@ -203,6 +206,7 @@ fun CustomisationScreen(navController: NavController) {
 private fun CustomiseSectionContent(section: CustomiseSection) {
     val pagerBleed = Modifier.bleedHorizontally(CustomisePageMargin)
     when (section) {
+        CustomiseSection.THEME -> AppThemeSection()
         CustomiseSection.ICONS -> IconsSection()
         CustomiseSection.ROUNDING -> {
             val (coverRadiusPx, onCoverRadiusChange) = rememberPreference(ThumbnailCornerRadiusKey, defaultValue = DefaultCoverRadius)

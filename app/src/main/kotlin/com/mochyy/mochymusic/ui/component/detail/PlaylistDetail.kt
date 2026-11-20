@@ -53,6 +53,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import com.mochyy.mochymusic.ui.theme.AppThemePreset
+import com.mochyy.mochymusic.ui.theme.LocalAppThemePreset
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -265,6 +269,8 @@ fun <A> rememberFeaturedArtists(key: Any?, artists: () -> List<A>, id: (A) -> St
 }
 
 // passes the scaffold's cover composable down to PlaylistHeader when classic or minimal style draws a framed cover
+private val LocalFlowPlaylistHeader = staticCompositionLocalOf { false }
+
 internal val LocalPlaylistFramedCover = staticCompositionLocalOf<(@Composable (Modifier) -> Unit)?> { null }
 
 /** the cover band at the top of a playlist, shared by the header item and the backdrop behind it */
@@ -309,6 +315,7 @@ fun PlaylistDetailScaffold(
     cover: (@Composable (Modifier) -> Unit)? = null,
     /** the theme colour for a drawn [cover], which has no picture to sample one from */
     coverThemeColor: Color? = null,
+    playlistTitle: String? = null,
     content: LazyListScope.() -> Unit,
 ) {
     // A bar that replaces the top bar (the list's own song search) sits over the list rather than
@@ -345,9 +352,11 @@ fun PlaylistDetailScaffold(
     val handedCover = remember(sharedElementKey) { containerTransformCover(sharedElementKey) }
     val coverUrl = handedCover ?: coverUrl
     val playlistStyle by rememberEnumPreference(PlaylistStyleKey, defaultValue = PlaylistStyle.FLOW)
-    val effectiveShowCover = showCover && (roundCapsule || playlistStyle == PlaylistStyle.FLOW)
-    val effectiveRoundCapsule = roundCapsule || (showCover && playlistStyle == PlaylistStyle.MINIMAL)
-    val classicBackdrop = showCover && !roundCapsule && playlistStyle == PlaylistStyle.CLASSIC
+    val useFlowHeader = playlistTitle != null && showCover && !roundCapsule &&
+        LocalAppThemePreset.current == AppThemePreset.FLOW
+    val effectiveShowCover = showCover && !useFlowHeader && (roundCapsule || playlistStyle == PlaylistStyle.FLOW)
+    val effectiveRoundCapsule = roundCapsule || (showCover && !useFlowHeader && playlistStyle == PlaylistStyle.MINIMAL)
+    val classicBackdrop = useFlowHeader || (showCover && !roundCapsule && playlistStyle == PlaylistStyle.CLASSIC)
     val framedCover: (@Composable (Modifier) -> Unit)? = remember(cover, coverUrl) {
         when {
             cover != null -> cover
@@ -434,7 +443,10 @@ fun PlaylistDetailScaffold(
         return
     }
 
-    CompositionLocalProvider(LocalPlaylistFramedCover provides framedCover) {
+    CompositionLocalProvider(
+        LocalPlaylistFramedCover provides framedCover,
+        LocalFlowPlaylistHeader provides useFlowHeader,
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -513,6 +525,7 @@ fun PlaylistDetailScaffold(
                 onMiniCoverClick = { scope.launch { lazyListState.animateScrollToItem(0) } },
                 roundCapsule = effectiveRoundCapsule,
                 mode = modeBar,
+                collapsedTitle = playlistTitle.takeIf { useFlowHeader },
             )
         }
 
@@ -715,6 +728,7 @@ internal fun PlaylistTopBar(
     onMiniCoverClick: () -> Unit,
     roundCapsule: Boolean = false,
     mode: PlaylistModeBar? = null,
+    collapsedTitle: String? = null,
 ) {
     val showChrome by remember { derivedStateOf { morph() > 0.01f } }
     val statusBarTop = WindowInsets.stableStatusBars.asPaddingValues().calculateTopPadding()
@@ -776,6 +790,7 @@ internal fun PlaylistTopBar(
                     onMoreClick = onMoreClick,
                     onMiniCoverClick = onMiniCoverClick,
                     roundCapsule = roundCapsule,
+                    collapsedTitle = collapsedTitle,
                 )
             }
         }
@@ -796,7 +811,9 @@ private fun PlaylistNormalBarRow(
     onMoreClick: (() -> Unit)?,
     onMiniCoverClick: () -> Unit,
     roundCapsule: Boolean,
+    collapsedTitle: String? = null,
 ) {
+    val showTitle by remember(morph) { derivedStateOf { morph() > 0.01f } }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier,
@@ -812,7 +829,17 @@ private fun PlaylistNormalBarRow(
             onMiniCoverClick = onMiniCoverClick,
             round = roundCapsule,
         )
-        Spacer(Modifier.weight(1f))
+        if (collapsedTitle != null && showTitle) {
+            Text(
+                text = collapsedTitle,
+                color = Color.White,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(horizontal = 14.dp)
+                    .graphicsLayer { alpha = morph().coerceIn(0f, 1f) },
+            )
+        } else Spacer(Modifier.weight(1f))
         if (onMoreClick != null) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -990,11 +1017,13 @@ fun PlaylistHeader(
     val framedCover = LocalPlaylistFramedCover.current
     // on its side the block sits on the cover at the left, so it never draws a framed cover of its own
     val side = LocalPlaylistSideHeader.current
+    val useFlow = LocalFlowPlaylistHeader.current && side == null && !compact
     val useMinimal = compact || (side == null && playlistStyle == PlaylistStyle.MINIMAL)
-    val useClassic = side == null && !compact && playlistStyle == PlaylistStyle.CLASSIC
+    val useClassic = useFlow || (side == null && !compact && playlistStyle == PlaylistStyle.CLASSIC)
 
     val body: @Composable () -> Unit = {
         Column(
+            horizontalAlignment = if (useFlow) Alignment.CenterHorizontally else Alignment.Start,
             modifier = Modifier.padding(
                 start = PlaylistInset + 1.dp,
                 end = PlaylistInset,
@@ -1021,7 +1050,8 @@ fun PlaylistHeader(
             }
             Text(
                 text = title,
-                style = if (useMinimal) PlaylistCompactTitleStyle else PlaylistTitleStyle,
+                style = if (useMinimal && !useFlow) PlaylistCompactTitleStyle else PlaylistTitleStyle,
+                textAlign = if (useFlow) TextAlign.Center else TextAlign.Start,
                 color = Color.White,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -1045,34 +1075,54 @@ fun PlaylistHeader(
                 )
             }
             Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                PlayPill(isPlaying = isPlaying, onClick = onPlayClick)
-                Spacer(Modifier.width(9.dp))
-                CircleAction(
-                    icon = R.drawable.shuffle,
-                    contentDescription = stringResource(R.string.shuffle),
-                    onClick = onShuffleClick,
-                    spinOnClick = true,
-                )
-                if (onSearchClick != null) {
-                    Spacer(Modifier.width(4.dp))
-                    CircleAction(
-                        icon = R.drawable.search_outline,
-                        contentDescription = stringResource(R.string.search_this_list),
-                        onClick = onSearchClick,
-                    )
+            if (useFlow) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Button(onClick = onPlayClick, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(if (isPlaying) R.string.pause else R.string.play))
+                    }
+                    OutlinedButton(onClick = onShuffleClick, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.shuffle))
+                    }
                 }
-                if (isSaved != null) {
-                    Spacer(Modifier.width(4.dp))
-                    CircleAction(
-                        icon = if (isSaved) R.drawable.library_add_check else R.drawable.library_add,
-                        contentDescription = stringResource(if (isSaved) R.string.pc_in_library else R.string.add_to_library),
-                        onClick = onSaveClick,
-                    )
-                }
-                if (actionsEnd != null) {
-                    Spacer(Modifier.weight(1f))
-                    actionsEnd()
+            }
+            if (!useFlow || onSearchClick != null || isSaved != null || actionsEnd != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(top = if (useFlow) 8.dp else 0.dp),
+                ) {
+                    if (!useFlow) {
+                        PlayPill(isPlaying = isPlaying, onClick = onPlayClick)
+                        Spacer(Modifier.width(9.dp))
+                        CircleAction(
+                            icon = R.drawable.shuffle,
+                            contentDescription = stringResource(R.string.shuffle),
+                            onClick = onShuffleClick,
+                            spinOnClick = true,
+                        )
+                    }
+                    if (onSearchClick != null) {
+                        Spacer(Modifier.width(4.dp))
+                        CircleAction(
+                            icon = R.drawable.search_outline,
+                            contentDescription = stringResource(R.string.search_this_list),
+                            onClick = onSearchClick,
+                        )
+                    }
+                    if (isSaved != null) {
+                        Spacer(Modifier.width(4.dp))
+                        CircleAction(
+                            icon = if (isSaved) R.drawable.library_add_check else R.drawable.library_add,
+                            contentDescription = stringResource(if (isSaved) R.string.pc_in_library else R.string.add_to_library),
+                            onClick = onSaveClick,
+                        )
+                    }
+                    if (actionsEnd != null) {
+                        Spacer(Modifier.weight(1f))
+                        actionsEnd()
+                    }
                 }
             }
             if (sortControl != null) {

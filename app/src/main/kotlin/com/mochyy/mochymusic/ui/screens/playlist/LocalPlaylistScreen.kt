@@ -496,6 +496,7 @@ fun LocalPlaylistScreen(
     PlaylistDetailScaffold(
         sharedElementKey = "playlist-${viewModel.playlistId}",
         coverUrl = coverUrl,
+        playlistTitle = playlist?.playlist?.name,
         lazyListState = lazyListState,
         onBackClick = { navController.navigateUp() },
         onBackLongClick = { navController.backToMain() },

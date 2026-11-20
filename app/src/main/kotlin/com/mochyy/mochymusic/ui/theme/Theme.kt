@@ -11,6 +11,9 @@ import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
@@ -39,6 +42,7 @@ const val ForceDarkTheme = true
 fun MochyTheme(
     darkTheme: Boolean = ForceDarkTheme,
     pureBlack: Boolean = false,
+    preset: AppThemePreset = AppThemePreset.DEFAULT,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -86,24 +90,39 @@ fun MochyTheme(
         }
     }
 
-    val colorScheme = remember(baseColorScheme, pureBlack, darkTheme) {
+    val colorScheme = remember(baseColorScheme, pureBlack, darkTheme, preset) {
+        val palette = if (preset == AppThemePreset.FLOW && darkTheme) baseColorScheme.copy(
+            primary = FlowAccent,
+            onPrimary = Color(0xFF241544),
+            primaryContainer = Color(0xFF33284C),
+            onPrimaryContainer = Color(0xFFEDE4FF),
+            background = FlowSurface,
+            surface = FlowSurface,
+            surfaceVariant = Color(0xFF252031),
+            onSurfaceVariant = Color(0xFFE2D9F3),
+            surfaceTint = FlowAccent,
+        ) else baseColorScheme
         if (darkTheme && pureBlack) {
-            baseColorScheme.pureBlack(true)
+            palette.pureBlack(true)
         } else {
-            baseColorScheme
+            palette
         }
     }
 
     val font = InterFontFamily
     val typography = remember(font) { appTypography(font) }
+    val shapes = MaterialTheme.shapes
     MaterialTheme(
+        shapes = if (preset == AppThemePreset.FLOW) shapes.copy(
+            medium = RoundedCornerShape(18.dp),
+            large = RoundedCornerShape(24.dp),
+        ) else shapes,
         colorScheme = colorScheme,
         typography = typography,
     ) {
-        ProvideTextStyle(
-            value = typography.bodyLarge,
-            content = content
-        )
+        CompositionLocalProvider(LocalAppThemePreset provides preset) {
+            ProvideTextStyle(value = typography.bodyLarge, content = content)
+        }
     }
 }
 
